@@ -4,17 +4,26 @@
 
 ## 目的と現在の範囲
 
-inquiry-labは、分析の問い・試行結果・統合レポートを記録するワークスペースの
-テンプレートを展開するPython CLI。分析にはPython、SQL、Notebookなど任意の実行手段を使える。
+inquiry-labは、分析の進行を支援するCodexプラグインと、分析の問い・試行結果・統合レポートを
+記録するワークスペースのテンプレートを展開するPython CLI。
+分析にはPython、SQL、Notebookなど任意の実行手段を使える。
 現在提供するコマンドは `inquiry-lab init <directory> --title "分析タイトル"`。
 利用方法と生成物の構成は [README.md](README.md) を参照する。
 
-現行版はテンプレート展開を扱う。分析の実行、結果の採用、完了状態、IDの自動採番は管理しない。
-Skill、プラグインmanifest、MCPサーバー、独自モデルループは未実装。
+現行CLIはテンプレート展開を扱う。分析の実行、結果の採用、完了状態、IDの自動採番は管理しない。
+`skills/analysis-framework/` に分析の進行を扱う試作Skillがある。
+プラグインmanifestとリポジトリ用marketplaceで、このSkillを提供する。
+段階別Skill、構造化データ管理、レポート自動生成、MCPサーバー、
+独自モデルループは未実装。
 過去の引き継ぎにある構想を、実装済みの機能や確定した仕様として扱わない。
 
 ## 実装の入口と開発方針
 
+- `.codex-plugin/plugin.json`：リポジトリ直下をプラグインとし、`./skills/` を参照する。
+- `.agents/skills/create-analysis-template/SKILL.md`：分析テンプレートを作成・改訂するリポジトリ開発用Skill。
+  生成したテーマ別Skillはプラグインの `skills/` に置く。
+- `.agents/plugins/marketplace.json`：`source.path: "./"` で同プラグインを公開する。
+  プラグインの導入とPython CLIの導入を区別し、不要なMCPやhookを追加しない。
 - `src/inquiry_lab/cli.py`：引数解析とCLIハンドラー。
   `argparse` の `set_defaults(func=...)` で登録し、`func(**args)` で呼び出す構成を保つ。
 - `src/inquiry_lab/workspace.py`：テンプレート読込と展開。
@@ -22,6 +31,9 @@ Skill、プラグインmanifest、MCPサーバー、独自モデルループは�
 - `src/inquiry_lab/templates/`：依頼、試行結果、統合レポートのMarkdownテンプレート。
   本文は現在英語で、利用者が記入する言語は自由。
 - `tests/test_cli.py`：CLIの公開挙動、生成物、既存データの保護、展開失敗時の後始末を検証する。
+- `skills/analysis-framework/SKILL.md`：目的・判断基準の整理と、結果に応じた分析の進行判断。
+  再開に必要な情報を残す方針を扱い、具体的な保存形式や記録の操作手順は今後設計する。
+  案件別の定量指標や未実装の段階別Skill・CLIを前提にしない。
 - `pyproject.toml`：Python 3.12以降、Flitによる配布、pytestとRuffによる検証を定義する。
   実行時の外部Python依存は現在ない。依存を追加する場合は必要性と配布への影響を確認する。
 
@@ -56,6 +68,7 @@ uv build
 配布設定やテンプレート同梱を変更した場合は、ビルドしたwheelを別環境へ導入し、
 リポジトリ外のcwdから `init` を実行して生成物を確認する。
 文書だけの変更では、参照先・現行実装との整合性と `git diff --check` を確認する。
+プラグイン定義を変更した場合は、JSON、Skillへの参照、marketplaceからの読込を確認する。
 
 ## 将来の拡張を検討するとき
 

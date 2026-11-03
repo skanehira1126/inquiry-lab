@@ -1,0 +1,23 @@
+{
+  "name": "inquiry-lab",
+  "version": "0.1.0",
+  "description": "目的と判断基準を整理し、試行結果に応じて分析を進めるスキルを提供します。",
+  "author": {
+    "name": "inquiry-lab contributors"
+  },
+  "license": "Apache-2.0",
+  "keywords": ["analysis", "research", "workflow"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Inquiry Lab",
+    "shortDescription": "問いと判断基準を整理し、根拠に沿って分析を進める",
+    "longDescription": "analysis-frameworkスキルで、目的・判断基準・停止条件を整理し、試行結果から継続・修正・分岐・停止を判断します。具体的な保存方式と段階別スキルは今後追加します。",
+    "developerName": "inquiry-lab contributors",
+    "category": "Productivity",
+    "capabilities": ["Interactive", "Read", "Write"],
+    "defaultPrompt": [
+      "分析の目的と判断基準を整理し、まず計画を作ってください。",
+      "既存の分析結果を確認し、次に行う試行を選んで分析を進めてください。"
+    ]
+  }
+}
