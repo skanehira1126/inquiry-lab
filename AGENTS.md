@@ -11,7 +11,8 @@ inquiry-labは、分析の進行を支援するCodexプラグインと、分析�
 利用方法と生成物の構成は [README.md](README.md) を参照する。
 
 現行CLIはテンプレート展開と、試行・判断のJSON記録、作業履歴のMarkdown出力を扱う。分析の実行、結果の採用、完了状態、IDの自動採番は管理しない。
-`skills/analysis-framework/` に分析の進行を扱う試作Skillがある。
+`skills/analysis-framework/` が分析の進行・記録・最終レポートを扱い、
+`skills/parameter-tuning/` がハイパーパラメータの比較・選定と専用レポートの雛形を扱う。
 プラグインmanifestとリポジトリ用marketplaceで、このSkillを提供する。
 段階別Skill、分析レポート自動生成、MCPサーバー、
 独自モデルループは未実装。
@@ -26,7 +27,7 @@ inquiry-labは、分析の進行を支援するCodexプラグインと、分析�
   プラグインの導入とPython CLIの導入を区別し、不要なMCPやhookを追加しない。
 - `src/inquiry_lab/cli.py`：引数解析とCLIハンドラー。
   `argparse` の `set_defaults(func=...)` で登録し、`func(**args)` で呼び出す構成を保つ。
-- `src/inquiry_lab/history.py`：履歴JSONの検査・保存と、人が読む `作業履歴.md` の生成。
+- `src/inquiry_lab/history.py`：履歴JSONの検査・保存と、短い `作業履歴.md`・各ループの詳細 `history/NNNNNN.md` の生成。
 - `src/inquiry_lab/workspace.py`：テンプレート読込と展開。
   テンプレートは `importlib.resources` から読み、インストール先や実行時のcwdに依存させない。
 - `src/inquiry_lab/templates/`：依頼、試行結果、統合レポートのMarkdownテンプレート。

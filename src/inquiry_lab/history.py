@@ -2,7 +2,7 @@ import json
 import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 
 RUN_FIELDS = {
     "hypothesis": "仮説",
@@ -28,7 +28,7 @@ def validate_entry(entry: object) -> dict:
         raise ValueError("history entry must be a JSON object")
     if type(entry.get("sequence")) is not int or not 1 <= entry["sequence"] <= 999999:
         raise ValueError("sequence must be an integer from 1 to 999999")
-    common = {"sequence", "kind", "current_state", "references", "depends_on", "title"}
+    common = {"sequence", "kind", "current_state", "references", "depends_on", "title", "summary"}
     parents = entry.get("depends_on", [])
     if not isinstance(parents, list) or any(
         type(parent) is not int or not 1 <= parent < entry["sequence"] for parent in parents
@@ -36,8 +36,9 @@ def validate_entry(entry: object) -> dict:
         raise ValueError("depends_on must list earlier sequence numbers")
     if len(set(parents)) != len(parents):
         raise ValueError("depends_on contains duplicate sequence numbers")
-    if "title" in entry and not nonempty_line(entry["title"]):
-        raise ValueError("title must be a nonempty single line")
+    for field in ("title", "summary"):
+        if field in entry and not nonempty_line(entry[field]):
+            raise ValueError(f"{field} must be a nonempty single line")
     kind = entry.get("kind")
     if kind == "run":
         fields = RUN_FIELDS
@@ -153,6 +154,43 @@ def dependency_diagram(entries: list[dict]) -> list[str]:
     return [*lines, "```", ""]
 
 
+def render_entry(entry: dict) -> str:
+    title = entry.get("title", entry.get("run_id", "判断の記録"))
+    lines = [
+        f"# {title}",
+        "",
+        GENERATED,
+        "",
+        f"[作業履歴へ戻る](../作業履歴.md#entry-{entry['sequence']})",
+        "",
+    ]
+    if entry["kind"] == "run":
+        lines.extend([f"Run　{entry['run_id']}", ""])
+    if (base := entry.get("base_run")) is not None:
+        lines.extend([f"元のrun　[記録{base}]({base:06d}.md)", ""])
+    if entry.get("depends_on"):
+        parents = [f"[記録{n}]({n:06d}.md)" for n in entry["depends_on"]]
+        lines.extend([f"依存元　{'、'.join(parents)}", ""])
+    fields = RUN_FIELDS if entry["kind"] == "run" else DECISION_FIELDS
+    for key, label in fields.items():
+        lines.extend([f"## {label}", ""])
+        lines.extend(f"- {item}" for item in entry[key])
+        lines.append("")
+    lines.extend(["## 参考", ""])
+    for ref in entry["references"]:
+        label = ref["label"].replace("\\", "\\\\").replace("[", r"\[").replace("]", r"\]")
+        target = ref["target"]
+        if not urlsplit(target).scheme and not target.startswith("/"):
+            # Stored local references are relative to the workspace, not history/.
+            target = "../" + target
+        target = quote(target, safe="/:#?=&%+@!$,;~")
+        lines.append(f"- [{label}](<{target}>)")
+    if not entry["references"]:
+        lines.append("- なし")
+    lines.extend(["", "## この時点の現在地", "", entry["current_state"], ""])
+    return "\n".join(lines)
+
+
 def render_history(workspace: Path) -> Path:
     directory = history_dir(workspace)
     entries = [read_entry(source) for source in sorted(directory.glob("*.json"))]
@@ -165,40 +203,39 @@ def render_history(workspace: Path) -> Path:
     lines.extend(dependency_diagram(entries))
     lines.extend(["## 現在地", "", latest["current_state"], ""])
     lines.extend([f"[該当する記録](#entry-{latest['sequence']})", "", "## 試行履歴"])
+    documents = {}
     for entry in entries:
-        is_run = entry["kind"] == "run"
-        title = entry["run_id"] if is_run else "判断の記録"
-        if "title" in entry:
-            title += f"　{entry['title']}"
-        lines.extend(["", f'<a id="entry-{entry["sequence"]}"></a>', "", f"### {title}", ""])
-        if (base := entry.get("base_run")) is not None:
-            lines.extend([f"元のrun　[記録{base}](#entry-{base})", ""])
-        if entry.get("depends_on"):
-            parents = [f"[記録{n}](#entry-{n})" for n in entry["depends_on"]]
-            lines.extend([f"依存元　{'、'.join(parents)}", ""])
-        fields = RUN_FIELDS if is_run else DECISION_FIELDS
-        for key, label in fields.items():
-            lines.append(f"- **{label}**")
-            lines.extend(f"  - {item}" for item in entry[key])
-        lines.append("- **参考**")
-        for ref in entry["references"]:
-            label = ref["label"].replace("\\", "\\\\").replace("[", r"\[").replace("]", r"\]")
-            target = quote(ref["target"], safe="/:#?=&%+@!$,;~")
-            lines.append(f"  - [{label}](<{target}>)")
-        if not entry["references"]:
-            lines.append("  - なし")
-        # Retain earlier checkpoints when later entries change the current state.
-        if entry is not latest:
-            lines.extend(["", f"この時点の現在地　{entry['current_state']}"])
-    path = workspace / "作業履歴.md"
-    if path.is_symlink():
-        raise ValueError(f"refusing to replace symlink: {path}")
-    if path.exists() and GENERATED not in path.read_text(encoding="utf-8").splitlines()[:3]:
-        raise ValueError(
-            f"refusing to overwrite a document not generated by history render: {path}"
+        number = entry["sequence"]
+        title = entry.get("title", entry.get("run_id", "判断の記録"))
+        summary = entry.get("summary", entry["current_state"])
+        lines.extend(
+            [
+                "",
+                f'<a id="entry-{number}"></a>',
+                "",
+                f"- **{title}** — {summary} [詳細](history/{number:06d}.md)",
+            ]
         )
+        documents[directory / f"{number:06d}.md"] = render_entry(entry)
+    path = workspace / "作業履歴.md"
+    documents[path] = "\n".join(lines) + "\n"
+    for destination in documents:
+        if destination.is_symlink():
+            raise ValueError(f"refusing to replace symlink: {destination}")
+        if (
+            destination.exists()
+            and GENERATED not in destination.read_text(encoding="utf-8").splitlines()[:3]
+        ):
+            raise ValueError(
+                f"refusing to overwrite a document not generated by history render: {destination}"
+            )
     with TemporaryDirectory(dir=workspace) as temporary:
-        source = Path(temporary) / "history.md"
-        source.write_text("\n".join(lines) + "\n", encoding="utf-8")
-        source.replace(path)
+        staged = []
+        for index, (destination, content) in enumerate(documents.items()):
+            source = Path(temporary) / f"{index}.md"
+            source.write_text(content, encoding="utf-8")
+            staged.append((source, destination))
+        # Stage all content before publishing, and publish the overview last.
+        for source, destination in staged:
+            source.replace(destination)
     return path.absolute()
