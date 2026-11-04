@@ -3,7 +3,7 @@
 分析の進行を支援するCodexプラグインと、分析ワークスペースを作るPython CLIです。
 プラグインには、目的と判断基準を整理し、試行結果に応じて次の作業を選ぶ
 `analysis-framework` と、frameworkから参照するテンプレート集 `analysis-templates` を同梱しています。
-現在はモデルのパラメータチューニング用テンプレートを提供しています。
+現在はモデルのパラメータチューニング、特徴量選択・エンジニアリング、誤差分析のテンプレートを提供しています。
 
 CLIは `init` で文章テンプレートを展開し、`history` で作業履歴の記録とMarkdown出力を行います。
 Pythonスクリプト、SQL、Notebookなど任意の方法で分析し、問いと根拠、現在の結論を
@@ -43,7 +43,12 @@ inquiry-lab/
 │       ├── references/parameter-tuning/
 │       │   ├── guide.md
 │       │   └── evaluation-uncertainty.md
-│       └── assets/parameter-tuning-report.md
+│       ├── references/feature-design/guide.md
+│       ├── references/error-analysis/guide.md
+│       └── assets/
+│           ├── parameter-tuning-report.md
+│           ├── feature-design-report.md
+│           └── error-analysis-report.md
 ├── src/inquiry_lab/                # Python CLIと文章テンプレート
 ├── tests/
 └── pyproject.toml
@@ -98,6 +103,13 @@ MLflowやローカルに保存した結果は原本を参照し、判断に必�
 基本の診断はbootstrapなしのSHAPとfeature importanceで、分割gainを提供する木モデルでは累積gain・平均gain・利用回数を確認します。
 重要度や誤差から変更候補を作り、再学習した比較で効果を確かめます。
 [レポート雛形](skills/analysis-templates/assets/feature-design-report.md)では、変更の意図と検証結果、採否の根拠を対応づけます。
+
+予測が外れる対象・条件を調べる案件では、[誤差分析用の参照文書](skills/analysis-templates/references/error-analysis/guide.md)を使います。
+分類・回帰・ランキングの予測と正解について、全体・比較するセグメント・計測する指標や図を先に決め、一括で診断・報告して完了します。
+事例確認、SHAPやbootstrapも必要なものを事前に選びます。結果から生じた新しい疑問や改善案は次の分析候補に残します。
+診断だけならホールドアウトは未使用に保ち、改善の実行・採用比較は対応する分析へ渡します。
+[レポート雛形](skills/analysis-templates/assets/error-analysis-report.md)は、検証項目の報告、傾向が見つかった項目、それぞれの検証方法と内容、適用範囲と次の検証、参考の順にまとめます。
+全項目の結果を先に示し、特徴的な傾向から方法と根拠を辿れるようにします。
 
 ## CLIの導入と実行
 
