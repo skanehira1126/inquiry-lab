@@ -1,0 +1,10 @@
+{
+  "sequence": 2,
+  "kind": "decision",
+  "title": "西店の原票照合を優先",
+  "depends_on": [1],
+  "decision": ["西店の4月分の原票を照合するまで、店舗間の客単価の比較を保留する。"],
+  "reason": ["西店では購入額の欠測率が20%で、東店の2%より高かった。"],
+  "references": [{"label": "店舗別の欠測件数（C-count行）", "target": "observations.csv"}],
+  "current_state": "客単価の比較は保留。西店の原票と購入額の欠測した16件を照合できれば再開する。"
+}

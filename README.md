@@ -4,10 +4,10 @@
 プラグインには、目的と判断基準を整理し、試行結果に応じて次の作業を選ぶ
 `analysis-framework` Skillを同梱しています。
 
-CLIは `init` による文章テンプレートの展開を提供します。
+CLIは `init` で文章テンプレートを展開し、`history` で作業履歴の記録とMarkdown出力を行います。
 Pythonスクリプト、SQL、Notebookなど任意の方法で分析し、問いと根拠、現在の結論を
 Markdownでつなげて残せます。CLIは分析の実行、結果の検証・採用、完了状態、IDの自動採番を
-管理しません。段階別Skill、構造化データ管理、レポート自動生成、MCPサーバー、
+管理しません。段階別Skill、分析レポートの自動生成、MCPサーバー、
 独自モデルループは未実装です。
 
 ## プラグインの導入
@@ -56,8 +56,12 @@ marketplaceの `source.path` は `./` で、このリポジトリのルートを
 `skills/analysis-framework/SKILL.md` を指定できます。
 `uv tool install .` によるCLI導入ではプラグインは登録されません。
 
-このSkillは分析の進行判断と、再開に必要な情報を残す方針を扱います。
-具体的な保存形式や記録の操作手順は、今後のデータ管理の設計で決めます。
+成果物は、判断する人が読む分析レポートと、試行・根拠・次の判断を作業順に辿るhistoryです。
+historyは全テーマで共通とし、レポートは共通部分にテーマ別スキルの掲載項目を組み込みます。
+MLflowやローカルに保存した結果は原本を参照し、判断に必要な値・表・図を本文にも載せます。
+[共通フォーマット](skills/analysis-framework/references/deliverables.md)と
+[チューニング・EDAの記入例](docs/examples/analysis-deliverables.md)を参照してください。
+試行と判断の正本はJSONで記録できます。分析レポートの自動生成は今後の設計対象です。
 
 ## CLIの導入と実行
 
@@ -112,6 +116,32 @@ Notebook、Pythonスクリプト、`analysis.yaml`、`run.yaml` は生成しま�
 文書内のRunラベルを `run-002` にし、対応する依頼への参照も確認してください。
 `req-001` と `run-001` は文書を対応させるラベルであり、CLIが管理する状態ではありません。
 
+## JSONで記録し、作業履歴を読む
+
+同じ店舗別欠測の試行を[記録したJSON](docs/examples/history/000001.json)と
+[生成した作業履歴.md](docs/examples/作業履歴.md)で比較できます。架空の集計値です。
+`results` の各要素が「結果」の箇条書きになり、`references` が「参考」のリンクになります。
+
+既存のワークスペースを明示して、1回に1件を記録します。次はリポジトリのルートから
+この例を新しいディレクトリに再現するコマンドです。
+
+```bash
+uv run inquiry-lab init analyses/missing --title "店舗別の欠測"
+cp docs/examples/observations.csv analyses/missing/
+for entry in docs/examples/history/*.json; do
+  uv run inquiry-lab history record --workspace analyses/missing --input "$entry"
+done
+uv run inquiry-lab history render --workspace analyses/missing
+```
+
+- `record` はファイル（`--input` 省略時は標準入力）のJSONを検査し、`history/000001.json` のように保存します。`sequence` は作業順に付ける1〜999999の整数です。同じ番号の記録は上書きしません。
+- 試行は `kind: "run"`、`run_id` と、`hypothesis`・`verification`・`results`・`discussion` の各配列で記します。各要素は1行の箇条書きです。試行を伴わない基準変更や停止判断には `kind: "decision"` を使い、`decision` と `reason` の配列に判断と理由を記します。
+- 両形式に `current_state`（その時点の判断や再開条件）と `references`（`label` と `target` の配列）を含めます。参照がなければ空配列にします。ローカルファイルはワークスペース基準のパス、MLflowなど外部の原本は対象のURLを指定します。
+- 試行や判断が過去の記録を使った場合は、その番号を `"depends_on": [1]` のように指定できます。依存元は記録済みの小さい番号に限ります。`title` には図で読みたい短い題を指定できます。
+- runの出発点にした過去のrunがあれば、その `sequence` を `base_run` に指定します。最初の試行や独立した試行は省略できます。[run-003の例](docs/examples/history/000004.json)は、原票を調べたrun-002（記録3）が行き詰まり、run-001（記録1）の集計から別の仮説を試したため、`"base_run": 1` と `"depends_on": [3]` を記録しています。
+- 明示した依存関係があると、生成文書の冒頭にMermaidの図が出ます。線で結ばれた記録を表示し、本文にも元のrunと依存元へのリンクを残します。CLIはMarkdownに `mermaid` コードブロックを書き、図の描画は対応するエディタやビューアが行います。
+- `render` は最新の `current_state` を冒頭に置き、全件を作業順に並べてワークスペース直下の `作業履歴.md` に出力します。訂正は元のJSONを編集して再生成します。
+
 ## CLIの動作
 
 展開先は存在しないディレクトリを指定してください。親ディレクトリは必要に応じて作成します。
@@ -124,7 +154,7 @@ Notebook、Pythonスクリプト、`analysis.yaml`、`run.yaml` は生成しま�
 
 このリポジトリで「モデル評価用の分析テンプレートを作りたい」などと依頼すると、開発用の
 [create-analysis-template](.agents/skills/create-analysis-template/SKILL.md) が自動選択の対象になります。
-作成先は `skills/<テーマ名>/` です。目的、評価基準と判断者、制限・禁止事項を整理し、
+作成先は `skills/<テーマ名>/` です。目的、評価基準と判断者、制限・禁止事項、レポートの掲載項目を整理し、
 繰り返し使う計算があれば、そのテーマの `scripts/` に同梱します。
 
 ```bash

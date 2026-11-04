@@ -7,13 +7,13 @@
 inquiry-labは、分析の進行を支援するCodexプラグインと、分析の問い・試行結果・統合レポートを
 記録するワークスペースのテンプレートを展開するPython CLI。
 分析にはPython、SQL、Notebookなど任意の実行手段を使える。
-現在提供するコマンドは `inquiry-lab init <directory> --title "分析タイトル"`。
+コマンドは `inquiry-lab init`、`inquiry-lab history record`、`inquiry-lab history render`。
 利用方法と生成物の構成は [README.md](README.md) を参照する。
 
-現行CLIはテンプレート展開を扱う。分析の実行、結果の採用、完了状態、IDの自動採番は管理しない。
+現行CLIはテンプレート展開と、試行・判断のJSON記録、作業履歴のMarkdown出力を扱う。分析の実行、結果の採用、完了状態、IDの自動採番は管理しない。
 `skills/analysis-framework/` に分析の進行を扱う試作Skillがある。
 プラグインmanifestとリポジトリ用marketplaceで、このSkillを提供する。
-段階別Skill、構造化データ管理、レポート自動生成、MCPサーバー、
+段階別Skill、分析レポート自動生成、MCPサーバー、
 独自モデルループは未実装。
 過去の引き継ぎにある構想を、実装済みの機能や確定した仕様として扱わない。
 
@@ -26,13 +26,14 @@ inquiry-labは、分析の進行を支援するCodexプラグインと、分析�
   プラグインの導入とPython CLIの導入を区別し、不要なMCPやhookを追加しない。
 - `src/inquiry_lab/cli.py`：引数解析とCLIハンドラー。
   `argparse` の `set_defaults(func=...)` で登録し、`func(**args)` で呼び出す構成を保つ。
+- `src/inquiry_lab/history.py`：履歴JSONの検査・保存と、人が読む `作業履歴.md` の生成。
 - `src/inquiry_lab/workspace.py`：テンプレート読込と展開。
   テンプレートは `importlib.resources` から読み、インストール先や実行時のcwdに依存させない。
 - `src/inquiry_lab/templates/`：依頼、試行結果、統合レポートのMarkdownテンプレート。
   本文は現在英語で、利用者が記入する言語は自由。
 - `tests/test_cli.py`：CLIの公開挙動、生成物、既存データの保護、展開失敗時の後始末を検証する。
 - `skills/analysis-framework/SKILL.md`：目的・判断基準の整理と、結果に応じた分析の進行判断。
-  再開に必要な情報を残す方針を扱い、具体的な保存形式や記録の操作手順は今後設計する。
+  再開に必要な情報と作業履歴の共通構成を扱う。CLIでJSONを記録してMarkdownを生成できる。
   案件別の定量指標や未実装の段階別Skill・CLIを前提にしない。
 - `pyproject.toml`：Python 3.12以降、Flitによる配布、pytestとRuffによる検証を定義する。
   実行時の外部Python依存は現在ない。依存を追加する場合は必要性と配布への影響を確認する。

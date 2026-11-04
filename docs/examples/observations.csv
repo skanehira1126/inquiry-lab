@@ -1,0 +1,8 @@
+run,setting,measure,train_auc,valid_auc,train_minus_valid,train_width95,valid_width95,ks_d,test_auc,test_ci_low,test_ci_high,missing,total
+A-dev,depth4,auc,0.78,0.72,0.06,0.06,0.08,0.91,,,,,
+A-dev,depth6,auc,0.81,0.75,0.06,0.06,0.08,0.90,,,,,
+A-test,depth6,auc,,,,,,,0.76,0.72,0.80,,
+B-dev,depth4,auc,0.78,0.72,0.06,0.06,0.08,0.91,,,,,
+B-dev,depth6,auc,0.83,0.73,0.10,0.06,0.08,0.99,,,,,
+C-count,east,missing_amount,,,,,,,,,,2,100
+C-count,west,missing_amount,,,,,,,,,,16,80
