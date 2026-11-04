@@ -12,7 +12,9 @@ inquiry-labは、分析の進行を支援するCodexプラグインと、分析�
 
 現行CLIはテンプレート展開と、試行・判断のJSON記録、作業履歴のMarkdown出力を扱う。分析の実行、結果の採用、完了状態、IDの自動採番は管理しない。
 `skills/analysis-framework/` が分析の進行・記録・最終レポートを扱い、
-`skills/parameter-tuning/` がハイパーパラメータの比較・選定と専用レポートの雛形を扱う。
+`skills/analysis-templates/` がframeworkから参照するテンプレート集を扱う。
+テーマごとの判断基準・手順を `references/`、レポート雛形を `assets/` に置き、
+現在はハイパーパラメータの比較・選定を提供する。テンプレート集の自動呼び出しは無効にする。
 プラグインmanifestとリポジトリ用marketplaceで、このSkillを提供する。
 段階別Skill、分析レポート自動生成、MCPサーバー、
 独自モデルループは未実装。
@@ -22,7 +24,7 @@ inquiry-labは、分析の進行を支援するCodexプラグインと、分析�
 
 - `.codex-plugin/plugin.json`：リポジトリ直下をプラグインとし、`./skills/` を参照する。
 - `.agents/skills/create-analysis-template/SKILL.md`：分析テンプレートを作成・改訂するリポジトリ開発用Skill。
-  生成したテーマ別Skillはプラグインの `skills/` に置く。
+  テーマごとの参照文書と雛形を `skills/analysis-templates/` に追加し、一覧を更新する。
 - `.agents/plugins/marketplace.json`：`source.path: "./"` で同プラグインを公開する。
   プラグインの導入とPython CLIの導入を区別し、不要なMCPやhookを追加しない。
 - `src/inquiry_lab/cli.py`：引数解析とCLIハンドラー。
@@ -36,6 +38,8 @@ inquiry-labは、分析の進行を支援するCodexプラグインと、分析�
 - `skills/analysis-framework/SKILL.md`：目的・判断基準の整理と、結果に応じた分析の進行判断。
   再開に必要な情報と作業履歴の共通構成を扱う。CLIでJSONを記録してMarkdownを生成できる。
   案件別の定量指標や未実装の段階別Skill・CLIを前提にしない。
+- `skills/analysis-templates/SKILL.md`：frameworkがスキル名で参照するテンプレートの選び方と一覧。
+  テーマ追加では参照文書と雛形を増やし、分析の実行・対話・記録・終了判断はframeworkに保つ。
 - `pyproject.toml`：Python 3.12以降、Flitによる配布、pytestとRuffによる検証を定義する。
   実行時の外部Python依存は現在ない。依存を追加する場合は必要性と配布への影響を確認する。
 

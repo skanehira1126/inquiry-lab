@@ -1,0 +1,5 @@
+interface:
+  display_name: "分析テンプレート"
+  short_description: "分析フレームワークから参照し、目的に合う判断基準とレポート雛形を選ぶ"
+policy:
+  allow_implicit_invocation: false

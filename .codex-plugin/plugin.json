@@ -11,7 +11,7 @@
   "interface": {
     "displayName": "Inquiry Lab",
     "shortDescription": "問いと判断基準を整理し、根拠に沿って分析を進める",
-    "longDescription": "analysis-frameworkスキルで、目的・判断基準・停止条件を整理し、試行結果から継続・修正・分岐・停止を判断します。履歴JSONと短い作業履歴、各ループの詳細、最終レポートをつなぎます。parameter-tuningスキルでハイパーパラメータの比較・選定と専用レポートを扱います。",
+    "longDescription": "analysis-frameworkスキルで、目的・判断基準・停止条件を整理し、試行結果から継続・修正・分岐・停止を判断します。履歴JSONと短い作業履歴、各ループの詳細、最終レポートをつなぎます。frameworkがanalysis-templatesから目的に合うテンプレートを選び、現在はハイパーパラメータの比較・選定と専用レポートを提供します。",
     "developerName": "inquiry-lab contributors",
     "category": "Productivity",
     "capabilities": ["Interactive", "Read", "Write"],

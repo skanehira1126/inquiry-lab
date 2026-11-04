@@ -2,7 +2,8 @@
 
 分析の進行を支援するCodexプラグインと、分析ワークスペースを作るPython CLIです。
 プラグインには、目的と判断基準を整理し、試行結果に応じて次の作業を選ぶ
-`analysis-framework` と、モデルのパラメータチューニング用のテーマ別スキルを同梱しています。
+`analysis-framework` と、frameworkから参照するテンプレート集 `analysis-templates` を同梱しています。
+現在はモデルのパラメータチューニング用テンプレートを提供しています。
 
 CLIは `init` で文章テンプレートを展開し、`history` で作業履歴の記録とMarkdown出力を行います。
 Pythonスクリプト、SQL、Notebookなど任意の方法で分析し、問いと根拠、現在の結論を
@@ -36,20 +37,26 @@ inquiry-lab/
 │   ├── analysis-framework/
 │   │   ├── SKILL.md
 │   │   └── agents/openai.yaml
-│   └── parameter-tuning/SKILL.md
+│   └── analysis-templates/
+│       ├── SKILL.md                # テンプレートの選び方と一覧
+│       ├── agents/openai.yaml     # 自動呼び出しを無効化
+│       ├── references/parameter-tuning/
+│       │   ├── guide.md
+│       │   └── evaluation-uncertainty.md
+│       └── assets/parameter-tuning-report.md
 ├── src/inquiry_lab/                # Python CLIと文章テンプレート
 ├── tests/
 └── pyproject.toml
 ```
 
 marketplaceの `source.path` は `./` で、このリポジトリのルートを参照します。
-新しいSkillは `skills/` 配下へ追加します。
+新しい分析テンプレートは `analysis-templates` の参照文書と雛形として追加します。
 
 ## 分析frameworkの試作Skill
 
 [analysis-framework](skills/analysis-framework/SKILL.md) は、分析目的を受け取り、対話で問いと判断基準を詰め、
-試行と評価を繰り返し、総評をまとめるSkillです。目的と入力に合うテーマ別スキルが利用できれば参照し、
-該当するスキルがなければ最初の試行に必要な情報から整理します。
+試行と評価を繰り返し、総評をまとめるSkillです。目的と入力に合うテンプレートを
+`analysis-templates` から選び、該当するものがなければ最初の試行に必要な情報から整理します。
 
 プラグイン導入後は、たとえば「`$inquiry-lab:analysis-framework` を使って、
 分析の目的と判断基準を整理し、必要な試行を進めて」と依頼します。
@@ -57,29 +64,32 @@ marketplaceの `source.path` は `./` で、このリポジトリのルートを
 `skills/analysis-framework/SKILL.md` を指定できます。
 `uv tool install .` によるCLI導入ではプラグインは登録されません。
 
+`analysis-templates` はframeworkがスキル名で参照する内部用のテンプレート集です。
+`allow_implicit_invocation: false` により、ユーザーの依頼からの自動呼び出しを無効にしています。
+frameworkが一覧と必要な参照文書を読むため、利用者がテンプレート集を直接呼び出す必要はありません。
+
 成果物は、判断する人が読む分析レポートと、試行・根拠・次の判断を作業順に辿るhistoryです。
-historyは全テーマで共通とし、最終レポートはテーマ別スキルの雛形を使います。
+historyは全テーマで共通とし、最終レポートはテンプレート集にあるテーマ別の雛形を使います。
 大章はテーマ内で固定し、小見出しと段落を案件の判断に合わせて組み立てます。
 MLflowやローカルに保存した結果は原本を参照し、判断に必要な値・表・図を本文にも載せます。
-[共通フォーマット](skills/analysis-framework/references/deliverables.md)と
-[チューニング・EDAの記入例](docs/examples/analysis-deliverables.md)を参照してください。
+[共通フォーマット](skills/analysis-framework/references/deliverables.md)を参照してください。
 試行と判断の正本はJSONで記録できます。分析レポートの自動生成は今後の設計対象です。
 最終レポートは、知見を伝えるとともに、結論から主要な判断・証拠・評価の前提まで辿れるようにします。
-[チューニング用の雛形](skills/parameter-tuning/assets/report-template.md)と
-[記入例](docs/examples/チューニングレポート.md)で、結論をレビューする読み順を確認できます。
-[EDAの記入例](docs/examples/分析レポート.md)は、テーマ別雛形がない場合の構成例です。
+[チューニング用の雛形](skills/analysis-templates/assets/parameter-tuning-report.md)で、結論をレビューする読み順を確認できます。
 
 チューニングのレポートは「結論」「モデルの性能と診断」「調整方針と検証」「適用範囲と残る課題」
 「参考」の5章を使います。調整ごとに、観測・意図・比較結果・判断をつなぎ、小見出しは案件に合わせます。
 共通Skillは分析先の準備、試行と判断の記録、再開、総評を担当します。
 [記録手順](skills/analysis-framework/references/history-recording.md)にJSONの項目とCLI操作をまとめています。
+[チューニング・EDAの履歴記入例](docs/examples/analysis-deliverables.md)では、各試行の記録内容を確認できます。
 
-モデリング案件では、最初に改善に使えるデータの範囲と最終評価用ホールドアウトの分割ルールを決めます。
+テーマ固有のデータ利用制約と停止条件はテンプレート側で定め、frameworkはその条件を確認して進行・終了を判断します。
+チューニング用テンプレートでは、最初に改善に使えるデータの範囲と最終評価用ホールドアウトの分割ルールを決めます。
 開発データ内では目的に応じて分割を変え、候補を支持する根拠が得られたときだけ最終評価へ進みます。
 候補を見送るときはホールドアウトを未使用のまま報告します。最終評価へ進んだ場合は、
 評価した時点で改善を終了し、事前に決めた指標と限界を総評にまとめます。
 
-モデルのパラメータを調整する案件では、[parameter-tuning](skills/parameter-tuning/SKILL.md) を参照できます。
+モデルのパラメータを調整する案件では、frameworkが[チューニング用の参照文書](skills/analysis-templates/references/parameter-tuning/guide.md)を読みます。
 分類・回帰・ランキングの標準指標と独自指標から目的に合う基準を選び、候補間の比較と採用判断を進めます。
 
 ## CLIの導入と実行
@@ -176,9 +186,10 @@ uv run inquiry-lab history render --workspace analyses/missing
 
 このリポジトリで「モデル評価用の分析テンプレートを作りたい」などと依頼すると、開発用の
 [create-analysis-template](.agents/skills/create-analysis-template/SKILL.md) が自動選択の対象になります。
-作成先は `skills/<テーマ名>/` です。目的、評価基準と判断者、制限・禁止事項を整理し、出力レポートの雛形もテーマの `assets/report-template.md` に置きます。
+目的、評価基準と判断者、制限・禁止事項を整理し、`skills/analysis-templates/references/<テーマ名>/guide.md` に置きます。
+出力レポートの雛形は `skills/analysis-templates/assets/<テーマ名>-report.md` に置き、テンプレート一覧へ追加します。
 
-繰り返し使う計算があれば、そのテーマの `scripts/` に同梱します。
+繰り返し使う計算があれば、`skills/analysis-templates/scripts/<テーマ名>/` に同梱します。
 
 ```bash
 uv sync
