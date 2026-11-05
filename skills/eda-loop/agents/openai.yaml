@@ -1,0 +1,3 @@
+interface:
+  display_name: "反復する探索的データ分析"
+  short_description: "独立したサブエージェントへEDAを委任し、次の探索と継続・停止を判断する"

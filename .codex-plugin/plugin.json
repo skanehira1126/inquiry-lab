@@ -11,7 +11,7 @@
   "interface": {
     "displayName": "Inquiry Lab",
     "shortDescription": "問いと判断基準を整理し、根拠に沿って分析を進める",
-    "longDescription": "analysis-frameworkスキルで、目的・判断基準・停止条件を整理し、試行結果から継続・修正・分岐・停止を判断します。履歴JSONと短い作業履歴、各ループの詳細、最終レポートをつなぎます。frameworkがanalysis-templatesから目的に合うテンプレートを選び、現在はハイパーパラメータの比較・選定と専用レポートを提供します。",
+    "longDescription": "analysis-frameworkで目的・判断基準を整理し、履歴と最終レポートをつなぎます。edaはデータに合う見方を選び、1shotで観察して知見と次の問いを返します。eda-loopは独立したサブエージェントへ各回のEDAを委任し、親が次の探索・方向転換・停止と統合を担当します。analysis-templatesはパラメータチューニング、特徴量設計、モデルの誤差分析の手順とレポート雛形を提供します。",
     "developerName": "inquiry-lab contributors",
     "category": "Productivity",
     "capabilities": ["Interactive", "Read", "Write"],
