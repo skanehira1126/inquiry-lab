@@ -1,0 +1,5 @@
+interface:
+  display_name: "モデルの誤差分析"
+  short_description: "全体と条件別の誤差を一括で診断し、強み・弱みと次の検証をまとめる"
+policy:
+  allow_implicit_invocation: false

@@ -1,4 +1,0 @@
-interface:
-  display_name: "分析フレームワーク"
-  short_description: "目的と判断基準を整理し、結果に応じて分析の進め方を選ぶ"
-  default_prompt: "$analysis-framework を使って目的と判断基準を整理し、試行結果に応じて分析を進めてください。"

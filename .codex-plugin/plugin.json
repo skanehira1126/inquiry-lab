@@ -11,7 +11,7 @@
   "interface": {
     "displayName": "Inquiry Lab",
     "shortDescription": "問いと判断基準を整理し、根拠に沿って分析を進める",
-    "longDescription": "analysis-frameworkで目的・判断基準を整理し、履歴と最終レポートをつなぎます。edaはデータに合う見方を選び、1shotで観察して知見と次の問いを返します。eda-loopは独立したサブエージェントへ各回のEDAを委任し、親が次の探索・方向転換・停止と統合を担当します。analysis-templatesはパラメータチューニング、特徴量設計、モデルの誤差分析の手順とレポート雛形を提供します。",
+    "longDescription": "analyzeで目的・判断基準を整理し、履歴と最終レポートをつなぎます。edaはデータに合う見方を選び、1shotで観察して知見と次の問いを返します。eda-loopは独立したサブエージェントへ各回のEDAを委任し、親が次の探索・方向転換・停止と統合を担当します。parameter-tuning、feature-design、error-analysisはそれぞれ設定比較、特徴量設計、誤差診断の手順とレポート雛形を提供します。分析の自動選択の入口はanalyzeです。",
     "developerName": "inquiry-lab contributors",
     "category": "Productivity",
     "capabilities": ["Interactive", "Read", "Write"],

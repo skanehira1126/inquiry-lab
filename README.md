@@ -2,7 +2,7 @@
 
 分析の進行を支援するCodexプラグインと、分析ワークスペースを作るPython CLIです。
 プラグインには、目的と判断基準を整理し、試行結果に応じて次の作業を選ぶ
-`analysis-framework`、一括で観察する `eda`、探索を繰り返す `eda-loop`、モデルの比較・診断用テンプレート集 `analysis-templates` を同梱しています。
+`analyze`、一括で観察する `eda`、探索を繰り返す `eda-loop`、`parameter-tuning`、`feature-design`、`error-analysis` を同梱しています。
 EDAは表形式・イベントと反復観測・予測準備の参照を組み合わせて使います。
 テンプレート集はモデルのパラメータチューニング、特徴量選択・エンジニアリング、誤差分析を提供しています。
 
@@ -24,7 +24,7 @@ codex plugin add inquiry-lab@inquiry-lab
 導入後は新しいタスクまたはセッションで利用します。
 プラグインとPython CLIは別々に導入します。プラグインはスキルを提供し、
 Pythonパッケージのインストールは行いません。
-現在のframeworkスキルは、特定のCLIや保存方式を利用の前提にしていません。
+現在のanalyzeスキルは、特定のCLIや保存方式を利用の前提にしていません。
 
 リポジトリ全体が一つのプラグインです。Notebook Workbenchと同じ、Codexで対応している
 `.codex-plugin/plugin.json` 形式を使用しています。
@@ -35,7 +35,7 @@ inquiry-lab/
 ├── .codex-plugin/plugin.json       # プラグインの情報とSkillの参照
 ├── .agents/plugins/marketplace.json # リポジトリ直下のプラグインを公開する一覧
 ├── skills/
-│   ├── analysis-framework/
+│   ├── analyze/
 │   │   ├── SKILL.md
 │   │   └── agents/openai.yaml
 │   ├── eda/
@@ -51,83 +51,87 @@ inquiry-lab/
 │   │   ├── SKILL.md                # EDAを繰り返し、次の依頼・継続・停止を判断する
 │   │   ├── agents/openai.yaml
 │   │   └── assets/report.md
-│   └── analysis-templates/
-│       ├── SKILL.md                # テンプレートの選び方と一覧
-│       ├── agents/openai.yaml     # 自動呼び出しを無効化
-│       ├── references/parameter-tuning/
-│       │   ├── guide.md
-│       │   └── evaluation-uncertainty.md
-│       ├── references/feature-design/guide.md
-│       ├── references/error-analysis/guide.md
-│       └── assets/
-│           ├── parameter-tuning-report.md
-│           ├── feature-design-report.md
-│           └── error-analysis-report.md
+│   ├── parameter-tuning/
+│   │   ├── SKILL.md                # 設定の比較・選定
+│   │   ├── agents/openai.yaml     # 自動選択を無効化
+│   │   ├── references/            # 分割・指標・不確実性の評価
+│   │   └── assets/report.md
+│   ├── feature-design/
+│   │   ├── SKILL.md                # 特徴量の削減・追加・変換
+│   │   ├── agents/openai.yaml
+│   │   ├── references/            # 比較設計・重要度の読み方
+│   │   └── assets/report.md
+│   └── error-analysis/
+│       ├── SKILL.md                # 計画した誤差診断を一括実施
+│       ├── agents/openai.yaml
+│       ├── references/diagnostics.md
+│       └── assets/report.md
 ├── src/inquiry_lab/                # Python CLIと文章テンプレート
 ├── tests/
 └── pyproject.toml
 ```
 
 marketplaceの `source.path` は `./` で、このリポジトリのルートを参照します。
-新しい分析テンプレートは `analysis-templates` の参照文書と雛形として追加します。
+新しい分析テーマは `skills/<テーマ名>/` に独立したSkillと雛形を置き、analyzeの選択表へ追加します。
 EDAで使う見方の追加は、`eda` の参照文書と選択条件を改訂します。
 
-## 分析frameworkの試作Skill
+## 分析の入口：analyze
 
-[analysis-framework](skills/analysis-framework/SKILL.md) は、分析目的を受け取り、対話で問いと判断基準を詰め、
+[analyze](skills/analyze/SKILL.md) は、分析目的を受け取り、対話で問いと判断基準を詰め、
 試行と評価を繰り返し、総評をまとめるSkillです。一括のEDAには `eda`、反復探索には `eda-loop` を使い、モデルの比較・診断には
-`analysis-templates` から目的と入力に合うテーマを選びます。該当するものがなければ最初の試行に必要な情報から整理します。
+`parameter-tuning`、`feature-design`、`error-analysis` から目的と入力に合うSkillを選びます。該当するものがなければ最初の試行に必要な情報から整理します。
 
-プラグイン導入後は、たとえば「`$inquiry-lab:analysis-framework` を使って、
+プラグイン導入後は、たとえば「`$inquiry-lab:analyze` を使って、
 分析の目的と判断基準を整理し、必要な試行を進めて」と依頼します。
 計画だけの依頼にも対応します。導入前に試す場合は、このリポジトリの
-`skills/analysis-framework/SKILL.md` を指定できます。
+`skills/analyze/SKILL.md` を指定できます。
 `uv tool install .` によるCLI導入ではプラグインは登録されません。
 
-`analysis-templates` はframeworkがスキル名で参照する内部用のテンプレート集です。
-`allow_implicit_invocation: false` により、ユーザーの依頼からの自動呼び出しを無効にしています。
-frameworkが一覧と必要な参照文書を読むため、利用者がテンプレート集を直接呼び出す必要はありません。
+分析の入口は `analyze` です。各専門Skillの `allow_implicit_invocation: false` により、
+`eda`・`eda-loop` を含めて自動選択を無効にしています。
+analyzeの選択表から必要なSkillを読む構成で、利用者が個別に呼ぶ必要はありません。
+明示的なSkill指定は引き続き利用できます。
 
 成果物は、判断する人が読む分析レポートと、試行・根拠・次の判断を作業順に辿るhistoryです。
-historyは全テーマで共通とし、最終レポートはテンプレート集にあるテーマ別の雛形を使います。
+historyは全テーマで共通とし、最終レポートは各Skillの雛形を使います。
 大章はテーマ内で固定し、小見出しと段落を案件の判断に合わせて組み立てます。
 MLflowやローカルに保存した結果は原本を参照し、判断に必要な値・表・図を本文にも載せます。
-[共通フォーマット](skills/analysis-framework/references/deliverables.md)を参照してください。
+[共通フォーマット](skills/analyze/references/deliverables.md)を参照してください。
 試行と判断の正本はJSONで記録できます。分析レポートの自動生成は今後の設計対象です。
 最終レポートは、知見を伝えるとともに、結論から主要な判断・証拠・評価の前提まで辿れるようにします。
-[チューニング用の雛形](skills/analysis-templates/assets/parameter-tuning-report.md)で、結論をレビューする読み順を確認できます。
+[チューニング用の雛形](skills/parameter-tuning/assets/report.md)で、結論をレビューする読み順を確認できます。
 
 チューニングのレポートは「結論」「モデルの性能と診断」「調整方針と検証」「適用範囲と残る課題」
 「参考」の5章を使います。調整ごとに、観測・意図・比較結果・判断をつなぎ、小見出しは案件に合わせます。
 共通Skillは分析先の準備、試行と判断の記録、再開、総評を担当します。
-[記録手順](skills/analysis-framework/references/history-recording.md)にJSONの項目とCLI操作をまとめています。
+[記録手順](skills/analyze/references/history-recording.md)にJSONの項目とCLI操作をまとめています。
 [チューニング・EDAの履歴記入例](docs/examples/analysis-deliverables.md)では、各試行の記録内容を確認できます。
 
-テーマ固有のデータ利用制約と停止条件はテンプレート側で定め、frameworkはその条件を確認して進行・終了を判断します。
+テーマ固有のデータ利用制約と停止条件はテンプレート側で定め、analyzeはその条件を確認して進行・終了を判断します。
 チューニング・特徴量設計のテンプレートでは、最初に改善に使えるデータの範囲と最終評価用ホールドアウトの分割ルールを決めます。
 開発データ内では目的に応じて分割を変え、候補を支持する根拠が得られたときだけ最終評価へ進みます。
 候補を見送るときはホールドアウトを未使用のまま報告します。最終評価へ進んだ場合は、
 評価した時点で改善を終了し、事前に決めた指標と限界を総評にまとめます。
 
-モデルのパラメータを調整する案件では、frameworkが[チューニング用の参照文書](skills/analysis-templates/references/parameter-tuning/guide.md)を読みます。
+モデルのパラメータを調整する案件では、analyzeが[チューニングSkill](skills/parameter-tuning/SKILL.md)を読みます。
 分類・回帰・ランキングの標準指標と独自指標から目的に合う基準を選び、候補間の比較と採用判断を進めます。
 
-特徴量の削減・追加・変換を扱う案件では、[特徴量選択・エンジニアリング用の参照文書](skills/analysis-templates/references/feature-design/guide.md)を使います。
+特徴量の削減・追加・変換を扱う案件では、[特徴量設計Skill](skills/feature-design/SKILL.md)を使います。
 基本は同じ検証条件での予測性能と特徴量数で判断し、追加・変換と削減を結果に応じて繰り返します。
 コストなどは具体的な制約がある場合に加え、bootstrapやnested CVは必須にしません。
 基本の診断はbootstrapなしのSHAPとfeature importanceで、分割gainを提供する木モデルでは累積gain・平均gain・利用回数を確認します。
 重要度や誤差から変更候補を作り、再学習した比較で効果を確かめます。
-[レポート雛形](skills/analysis-templates/assets/feature-design-report.md)では、変更の意図と検証結果、採否の根拠を対応づけます。
+[レポート雛形](skills/feature-design/assets/report.md)では、変更の意図と検証結果、採否の根拠を対応づけます。
 
-予測が外れる対象・条件を調べる案件では、[誤差分析用の参照文書](skills/analysis-templates/references/error-analysis/guide.md)を使います。
+予測が外れる対象・条件を調べる案件では、[誤差分析Skill](skills/error-analysis/SKILL.md)を使います。
 分類・回帰・ランキングの予測と正解について、全体・比較するセグメント・計測する指標や図を先に決め、一括で診断・報告して完了します。
 事例確認、SHAPやbootstrapも必要なものを事前に選びます。結果から生じた新しい疑問や改善案は次の分析候補に残します。
 診断だけならホールドアウトは未使用に保ち、改善の実行・採用比較は対応する分析へ渡します。
-[レポート雛形](skills/analysis-templates/assets/error-analysis-report.md)は、検証項目の報告、傾向が見つかった項目、それぞれの検証方法と内容、適用範囲と次の検証、参考の順にまとめます。
+[レポート雛形](skills/error-analysis/assets/report.md)は、検証項目の報告、傾向が見つかった項目、それぞれの検証方法と内容、適用範囲と次の検証、参考の順にまとめます。
 全項目の結果を先に示し、特徴的な傾向から方法と根拠を辿れるようにします。
 
 データの性質や利用上の前提を調べる案件では、[eda](skills/eda/SKILL.md) Skillで範囲を定めた1shotの探索を行います。
-「`$inquiry-lab:eda` を使って、このデータを一括で概観し、知見と次の問いを返して」と直接依頼できます。
+「`$inquiry-lab:analyze` を使って、このデータを一括で概観し、知見と次の問いを返して」と依頼できます。
 全体像の把握では、イベントの性質、分布と構成、時間傾向、条件による違い、関係、観測上の制約を広く検討します。
 構造と実例から説明のための暫定的な質問を立て、表形式・イベント・予測準備の参照を組み合わせて確認・評価します。
 具体的な質問や方法はデータに合わせて選び、利用意図があれば、そこに使えそうな切り口も探します。
@@ -137,7 +141,7 @@ MLflowやローカルに保存した結果は原本を参照し、判断に必�
 何をどう観察し、その根拠からどこまで言えるかを確認できるようにします。質問別の回答や次の探索候補は付録に残します。
 CLIの共通run雛形は、EDA実施時にこの構成へ整えます。
 
-反復したい場合は「`$inquiry-lab:eda-loop` を使って、観測を受けて見方を変えながら探索して」と依頼します。
+反復したい場合は「`$inquiry-lab:analyze` を使って、観測を受けて見方を変えながらEDAを繰り返して」と依頼します。
 [eda-loop](skills/eda-loop/SKILL.md) が、1shotの結果を読み、次の依頼・方向転換・停止を判断します。
 各回を新しいサブエージェントへ委任し、親は調査済み範囲と根拠から必要な情報を選んで渡します。
 子は親の会話履歴を自動継承せず、指定runの結果と成果物を返します。親が知見の統合と次の探索を担当します。
@@ -145,7 +149,7 @@ CLIの共通run雛形は、EDA実施時にこの構成へ整えます。
 対象・関心・予算の範囲で探索し、仮説の発見やモデル改善を完了条件にはしません。
 loopから各回へ渡す関心・入力・既知の観測・固定条件と裁量・予算・出力先は、[依頼と返却の契約](skills/eda/references/request.md)に定めています。
 loopは質問への回答と説明の不足から質問を見直し、必要な追加観察を次のrunへ渡します。
-frameworkの記録手順を使い、[統合レポート雛形](skills/eda-loop/assets/report.md)で `output.md` をまとめます。
+analyzeの記録手順を使い、[統合レポート雛形](skills/eda-loop/assets/report.md)で `output.md` をまとめます。
 構成は「全体像の要約」「データと読み取りの前提」「データの特徴」「参考」の4章です。
 項目を横断した総括は要約にまとめ、特徴の章では各観点の知見・探索経緯・未確認の範囲を示し、詳細を各runへつなぎます。
 想定質問・項目別の回答・次の探索候補はrunに、停止理由と再開条件は作業履歴に残します。
@@ -244,10 +248,10 @@ uv run inquiry-lab history render --workspace analyses/missing
 
 このリポジトリで「モデル評価用の分析テンプレートを作りたい」などと依頼すると、開発用の
 [create-analysis-template](.agents/skills/create-analysis-template/SKILL.md) が自動選択の対象になります。
-目的、評価基準と判断者、制限・禁止事項を整理し、`skills/analysis-templates/references/<テーマ名>/guide.md` に置きます。
-出力レポートの雛形は `skills/analysis-templates/assets/<テーマ名>-report.md` に置き、テンプレート一覧へ追加します。
-
-繰り返し使う計算があれば、`skills/analysis-templates/scripts/<テーマ名>/` に同梱します。
+目的、入力、比較手順、終了条件を `skills/<テーマ名>/SKILL.md` にまとめ、
+出力レポートの雛形を `assets/report.md`、必要な詳細を `references/` に置きます。
+各Skillの自動選択を無効にし、analyzeの選択表へ登録します。
+繰り返し使う計算があれば、そのSkillの `scripts/` に同梱します。
 
 ```bash
 uv sync
@@ -268,7 +272,7 @@ CLIは `src/inquiry_lab/cli.py`、展開処理は `src/inquiry_lab/workspace.py`
 元の問い・結果・統合レポートの構成を保ち、Notebook固有の参照、実行状態への依存、
 未実装の必須項目検査を示すmarkerを除去しています。
 
-`analysis-framework` はNotebook Workbenchの分析Skillと反復分析の設計を基にしています
+`analyze` はNotebook Workbenchの分析Skillと反復分析の設計を基にしています
 （Apache-2.0、ベースcommit `a2ad2658e29034acfd15e51b8ee81df00f6a7cf7`）。
 2026-11-03時点のローカル作業ツリーにある、未コミットの `SKILL.md` の変更と
 未追跡の `references/iterative-analysis.md` も参照しました。

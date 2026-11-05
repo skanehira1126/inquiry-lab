@@ -11,14 +11,14 @@ inquiry-labは、分析の進行を支援するCodexプラグインと、分析�
 利用方法と生成物の構成は [README.md](README.md) を参照する。
 
 現行CLIはテンプレート展開と、試行・判断のJSON記録、作業履歴のMarkdown出力を扱う。分析の実行、結果の採用、完了状態、IDの自動採番は管理しない。
-`skills/analysis-framework/` が分析の進行・記録・最終レポートを扱う。
+`skills/analyze/` が分析の進行・記録・最終レポートを扱う。
 `skills/eda/` は1shotの探索を担い、表形式・イベントと反復観測・予測準備の参照を組み合わせ、一括で観察・報告する。
 `skills/eda-loop/` は各回のEDAを独立したサブエージェントへ委任し、親が次の依頼・方向転換・停止を判断する。
 新しい子コンテキストを作れる環境を前提とし、同一エージェントでの反復へは切り替えない。`eda` 単独の1shot利用は可能。
-`skills/analysis-templates/` はframeworkから参照するテンプレート集で、
-ハイパーパラメータの比較・選定、モデルベースの特徴量選択・特徴量エンジニアリング、モデルの誤差分析を提供する。
-各Skillの判断基準・手順は `references/`、レポート雛形は `assets/` に置く。
-テンプレート集の自動呼び出しは無効にする。
+`skills/parameter-tuning/`、`skills/feature-design/`、`skills/error-analysis/` は、
+設定の比較・選定、特徴量の選択・設計、モデルの誤差診断をそれぞれ扱う。
+各Skillの基本手順と終了条件は `SKILL.md`、詳細は `references/`、レポート雛形は `assets/` に置く。
+分析の入口はanalyzeに揃え、EDAを含む専門Skillの自動選択は無効にする。
 プラグインmanifestとリポジトリ用marketplaceで、このSkillを提供する。
 段階別Skill、分析レポート自動生成、MCPサーバー、
 独自モデルループは未実装。
@@ -28,7 +28,7 @@ inquiry-labは、分析の進行を支援するCodexプラグインと、分析�
 
 - `.codex-plugin/plugin.json`：リポジトリ直下をプラグインとし、`./skills/` を参照する。
 - `.agents/skills/create-analysis-template/SKILL.md`：分析テンプレートを作成・改訂するリポジトリ開発用Skill。
-  テーマごとの参照文書と雛形を `skills/analysis-templates/` に追加し、一覧を更新する。
+  `skills/<テーマ名>/` に独立したSkillと雛形を追加し、analyzeの選択表を更新する。
 - `.agents/plugins/marketplace.json`：`source.path: "./"` で同プラグインを公開する。
   プラグインの導入とPython CLIの導入を区別し、不要なMCPやhookを追加しない。
 - `src/inquiry_lab/cli.py`：引数解析とCLIハンドラー。
@@ -39,19 +39,21 @@ inquiry-labは、分析の進行を支援するCodexプラグインと、分析�
 - `src/inquiry_lab/templates/`：依頼、試行結果、統合レポートのMarkdownテンプレート。
   本文は現在英語で、利用者が記入する言語は自由。
 - `tests/test_cli.py`：CLIの公開挙動、生成物、既存データの保護、展開失敗時の後始末を検証する。
-- `skills/analysis-framework/SKILL.md`：目的・判断基準の整理と、結果に応じた分析の進行判断。
+- `skills/analyze/SKILL.md`：目的・判断基準の整理と、結果に応じた分析の進行判断。
   再開に必要な情報と作業履歴の共通構成を扱う。CLIでJSONを記録してMarkdownを生成できる。
   案件別の定量指標や未実装の段階別Skill・CLIを前提にしない。
 - `skills/eda/SKILL.md`：データを説明するための暫定的な質問を立て、1shotで確認・評価・報告するEDAの入口。全体像の把握では広い視点を検討し、データの形・観測の構造・利用目的に応じて
   `references/` の見方を組み合わせる。利用予定のデータセット固有の列名や規則を共通の前提にしない。
-  EDAの見方を追加する場合はここを改訂する。依頼・実行記録はframeworkの共通手順を使い、結果からの追加探索は行わない。
+  EDAの見方を追加する場合はここを改訂する。依頼・実行記録はanalyzeの共通手順を使い、結果からの追加探索は行わない。
   `references/request.md` が呼出元との依頼・返却の共通契約。直接実行でも出力はrunで、`output.md` の執筆・更新はしない。
   `assets/result.md` で観察の位置づけ・対象と方法・結果と読み取り・言えることと限界・再現情報の本文5章を作る。質問別の回答・次の候補は付録に残す。
 - `skills/eda-loop/SKILL.md`：1shotのEDAを毎回新しい子へ委任する外側の探索ループ。必要な調査済み範囲と根拠を渡し、
   質問の見直し、次の依頼・継続・停止と知見の統合を担当する。観察手法と依頼契約は `eda` を使い、`assets/report.md` で `output.md` を作る。
   想定質問と回答はrunに残す。統合レポートは全体の総括と、各観点の知見・探索経緯・未確認の範囲を示し、詳細を各runへつなぐ。
-- `skills/analysis-templates/SKILL.md`：frameworkがスキル名で参照するテンプレートの選び方と一覧。
-  テーマ追加では参照文書と雛形を増やし、分析の実行・対話・記録・終了判断はframeworkに保つ。
+- `skills/parameter-tuning/SKILL.md`：設定の探索・比較と最終評価の終了条件。
+- `skills/feature-design/SKILL.md`：特徴量の削減・追加・変換を再学習で比較する手順と終了条件。
+- `skills/error-analysis/SKILL.md`：計画した範囲の誤差を一括診断し、報告して終了する手順。
+  各Skillはanalyzeの共通記録を使い、テーマ追加では独立したSkill・雛形とanalyzeの選択表を更新する。
 - `pyproject.toml`：Python 3.12以降、Flitによる配布、pytestとRuffによる検証を定義する。
   実行時の外部Python依存は現在ない。依存を追加する場合は必要性と配布への影響を確認する。
 

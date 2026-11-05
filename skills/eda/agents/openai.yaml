@@ -1,3 +1,5 @@
 interface:
   display_name: "探索的データ分析（1shot）"
   short_description: "範囲を定めて一括で観察し、データの知見と仮説・次の問いを返す"
+policy:
+  allow_implicit_invocation: false
