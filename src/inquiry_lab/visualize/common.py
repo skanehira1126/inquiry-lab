@@ -17,7 +17,7 @@ def plot_histogram(
     column: str,
     hue: str | None = None,
 ) -> Path:
-    """Save a numeric column's counts in automatic bins, optionally colored by a column.
+    """Save a histogram with horizontal box plots above a shared numeric axis.
 
     All groups share equal-width bin edges computed from all values using NumPy's
     ``auto`` rule (Sturges and Freedman-Diaconis). Groups are
@@ -25,6 +25,8 @@ def plot_histogram(
     Hue values are treated as categories, sorted by value, with at most 20 groups.
     Nulls and non-finite values in selected columns are rejected, not dropped.
     The column must be numeric; hue values must be scalar and sortable.
+    Each group's box shows the median and quartiles, with whiskers extending to
+    the furthest observations within 1.5 IQR and points beyond them shown separately.
 
     Save PNG (900 x 900 px), SVG, or PDF, creating parents and overwriting the
     output file. Return its Path without changing df or exposing plotting options.
@@ -33,47 +35,40 @@ def plot_histogram(
     output = Path(output)
     if output.suffix.lower() not in {".png", ".svg", ".pdf"}:
         raise ValueError("output must have a .png, .svg, or .pdf extension")
-    if column not in df.columns or (hue is not None and hue not in df.columns):
-        raise ValueError("column and hue must name existing columns")
-    column_values = df.get_column(column)
-    if df.is_empty():
-        raise ValueError("df must contain at least one row")
-    if column_values.null_count() or not column_values.dtype.is_numeric():
-        raise ValueError("selected column must be numeric and contain no nulls")
-    values = np.asarray(column_values.to_numpy(), dtype=float)
-    if not np.isfinite(values).all():
-        raise ValueError("selected column must contain only finite values")
-
-    groups = [values]
-    names = [f"All (n = {len(values):,})"]
-    if hue is not None:
-        hue_values = df.get_column(hue)
-        if hue_values.null_count():
-            raise ValueError("hue column must not contain nulls")
-        if hue_values.dtype.is_nested() or hue_values.dtype == pl.Object:
-            raise ValueError("hue column must contain sortable scalar values")
-        if hue_values.dtype.is_float() and not hue_values.is_finite().all():
-            raise ValueError("hue column must contain only finite values")
-        categories = hue_values.unique().sort().to_list()
-        if len(categories) > 20:
-            raise ValueError("hue column must contain at most 20 groups")
-        groups = [
-            np.asarray(df.filter(pl.col(hue) == value).get_column(column).to_numpy(), dtype=float)
-            for value in categories
-        ]
-        names = [
-            f"{value} (n = {len(group):,})"
-            for value, group in zip(categories, groups, strict=True)
-        ]
+    values = _numeric_values(df, column)
+    frames, names = _plot_groups(df, hue)
+    groups = [np.asarray(frame.get_column(column).to_numpy(), dtype=float) for frame in frames]
 
     bins = np.histogram_bin_edges(values, bins="auto")
     style = {key: value for key, value in mpl.rcParamsDefault.items() if key != "backend"}
     with mpl.rc_context(rc=style):
         figure = Figure(figsize=(6, 6), dpi=150, layout="constrained")
         FigureCanvasAgg(figure)
-        ax = figure.subplots()
+        box_ax, ax = figure.subplots(
+            2, 1, sharex=True, height_ratios=[max(1, len(groups) * 0.25), 3]
+        )
         palette = mpl.colormaps["tab10" if len(groups) <= 10 else "tab20"]
         colors = [palette(index) for index in range(len(groups))]
+        for position, (group, color) in enumerate(zip(groups, colors, strict=True), start=1):
+            box_ax.boxplot(
+                group,
+                positions=[position],
+                orientation="horizontal",
+                whis=1.5,
+                widths=0.6,
+                patch_artist=True,
+                manage_ticks=False,
+                boxprops={"facecolor": color, "edgecolor": color, "alpha": 0.3},
+                medianprops={"color": color, "linewidth": 1.5},
+                whiskerprops={"color": color},
+                capprops={"color": color},
+                flierprops={"marker": "o", "markersize": 3, "markeredgecolor": color},
+            )
+        box_ax.set(title="Distribution", ylim=(len(groups) + 0.5, 0.5))
+        box_ax.set_yticks(range(1, len(groups) + 1), labels=names, fontsize=8)
+        box_ax.tick_params(axis="x", bottom=False)
+        box_ax.grid(visible=True, axis="x", color="#e5e7eb", linewidth=0.8)
+        box_ax.set_axisbelow(True)
         ax.hist(
             groups,
             bins=bins,
@@ -83,7 +78,7 @@ def plot_histogram(
             label=names,
         )
         ax.hist(groups, bins=bins, histtype="step", linewidth=1.5, color=colors)
-        ax.set(title="Distribution", xlabel=column, ylabel="Count", ylim=(0, None))
+        ax.set(xlabel=column, ylabel="Count", ylim=(0, None))
         ax.yaxis.set_major_locator(MaxNLocator(integer=True))
         ax.grid(visible=True, axis="y", color="#e5e7eb", linewidth=0.8)
         ax.set_axisbelow(True)
@@ -92,10 +87,100 @@ def plot_histogram(
         ax.legend(
             handles=[handles_by_label[name] for name in names],
             title=hue,
-            loc="upper left",
-            bbox_to_anchor=(1, 1),
+            loc="best",
+            ncols=(len(groups) + 4) // 5,
+            fontsize=8,
         )
         output.parent.mkdir(parents=True, exist_ok=True)
         figure.savefig(output, format=output.suffix[1:].lower(), dpi=150)
 
     return output
+
+
+def plot_scatter(
+    df: pl.DataFrame,
+    *,
+    output: str | Path,
+    x: str,
+    y: str,
+    hue: str | None = None,
+) -> Path:
+    """Save paired numeric observations as a scatter plot, optionally colored by group.
+
+    Plot every row without sampling, aggregation, jitter, or a fitted trend.
+    Both axes must contain finite numeric values with no nulls. Hue is categorical
+    even for numeric values; groups are sorted by value, limited to 20, and labeled
+    with row counts. Nulls, non-finite floats, and nested/object hue values are rejected.
+    The plotting area is square; the two axes retain independent numeric scales.
+
+    Save PNG (900 x 900 px), SVG, or PDF, creating parents and overwriting output.
+    Return its Path without changing df, caller styles, or open pyplot figures.
+    Invalid inputs raise ValueError before creating directories or saving a file.
+    """
+    output = Path(output)
+    if output.suffix.lower() not in {".png", ".svg", ".pdf"}:
+        raise ValueError("output must have a .png, .svg, or .pdf extension")
+    _numeric_values(df, x)
+    _numeric_values(df, y)
+    groups, names = _plot_groups(df, hue)
+
+    style = {key: value for key, value in mpl.rcParamsDefault.items() if key != "backend"}
+    with mpl.rc_context(rc=style):
+        figure = Figure(figsize=(6, 6), dpi=150, layout="constrained")
+        FigureCanvasAgg(figure)
+        ax = figure.subplots()
+        palette = mpl.colormaps["tab10" if len(groups) <= 10 else "tab20"]
+        for index, (group, name) in enumerate(zip(groups, names, strict=True)):
+            ax.scatter(
+                np.asarray(group.get_column(x).to_numpy(), dtype=float),
+                np.asarray(group.get_column(y).to_numpy(), dtype=float),
+                color=palette(index),
+                s=20,
+                alpha=0.6,
+                linewidths=0,
+                label=name,
+            )
+        ax.set(title="Scatter plot", xlabel=x, ylabel=y, box_aspect=1)
+        ax.grid(visible=True, color="#e5e7eb", linewidth=0.8)
+        ax.set_axisbelow(True)
+        ax.legend(title=hue, loc="best", ncols=(len(groups) + 4) // 5, fontsize=8)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        figure.savefig(output, format=output.suffix[1:].lower(), dpi=150)
+
+    return output
+
+
+def _numeric_values(df: pl.DataFrame, column: str) -> np.ndarray:
+    if column not in df.columns:
+        raise ValueError(f"column {column!r} must name an existing column")
+    if df.is_empty():
+        raise ValueError("df must contain at least one row")
+    values = df.get_column(column)
+    if values.null_count() or not values.dtype.is_numeric():
+        raise ValueError(f"column {column!r} must be numeric and contain no nulls")
+    array = np.asarray(values.to_numpy(), dtype=float)
+    if not np.isfinite(array).all():
+        raise ValueError(f"column {column!r} must contain only finite values")
+    return array
+
+
+def _plot_groups(df: pl.DataFrame, hue: str | None) -> tuple[list[pl.DataFrame], list[str]]:
+    if hue is None:
+        return [df], [f"All (n = {len(df):,})"]
+    if hue not in df.columns:
+        raise ValueError("hue must name an existing column")
+    values = df.get_column(hue)
+    if values.null_count():
+        raise ValueError("hue column must not contain nulls")
+    if values.dtype.is_nested() or values.dtype == pl.Object:
+        raise ValueError("hue column must contain sortable scalar values")
+    if values.dtype.is_float() and not values.is_finite().all():
+        raise ValueError("hue column must contain only finite values")
+    categories = values.unique().sort().to_list()
+    if len(categories) > 20:
+        raise ValueError("hue column must contain at most 20 groups")
+    groups = [df.filter(pl.col(hue) == value) for value in categories]
+    names = [
+        f"{value} (n = {len(group):,})" for value, group in zip(categories, groups, strict=True)
+    ]
+    return groups, names

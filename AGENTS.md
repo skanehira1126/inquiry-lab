@@ -17,6 +17,8 @@ Notebook Workbenchにも同等CLIを残せるが、inquiry-labは実行時に依
 `visualize` はPython APIとして、見た目を固定した分析用グラフの描画・保存を扱う。
 `visualize.ml.classifier.plot_roc_curve` は2値分類のROC曲線とAUCを保存する。
 `visualize.common.plot_histogram` は一般の数値列の分布を保存し、任意の `hue` 列で色分けする。
+横軸と配色を共有した群別の箱ひげ図を上部に添える。
+`visualize.common.plot_scatter` は2つの数値列の関係を散布図で保存し、任意の `hue` 列で色分けする。
 `plot_calibration_curve` は確率の較正曲線と、同じビンのサンプル数を重ねて保存する。
 `skills/analyze/` が分析の進行・記録・最終レポートを扱う。
 `skills/eda/` は1shotの探索を担い、表形式・イベントと反復観測・予測準備の参照を組み合わせ、一括で観察・報告する。
@@ -61,6 +63,9 @@ Notebook Workbenchにも同等CLIを残せるが、inquiry-labは実行時に依
   `plot_histogram` はPolars DataFrameと対象列 `column`、任意の色分け列 `hue` を受け取る。
   対象列全体からNumPyの `auto` でビンを決め、群間で共有する。
   縦軸は件数で、`hue` のカテゴリは最大20群。テストは `tests/test_visualize_common.py`。
+  上部の箱ひげ図は中央値・四分位範囲・1.5 IQRのひげと外側の点を示す。
+  `plot_scatter` は数値列 `x`・`y` と任意の `hue` を受け取り、同じ行の値を1点として全行を描画する。
+  両関数とも指定列の欠損・非有限値を拒否し、群の値順に配色して件数を添える。
 - `src/inquiry_lab/visualize/ml/classifier.py`：分類モデル向けのROC曲線・較正曲線の描画と保存。
   配色・レイアウトを固定し、Figure・Axesや任意の描画オプションを公開しない。
   Polars DataFrameと列名を受け取り、既定の列名は `label` と `score`。

@@ -12,7 +12,7 @@ license = { file = "LICENSE" }
 dependencies = ["pyarrow>=19"]
 
 [project.optional-dependencies]
-visualize = ["matplotlib>=3.8", "numpy>=1.26", "polars>=1", "scikit-learn>=1.4"]
+visualize = ["matplotlib>=3.10", "numpy>=1.26", "polars>=1", "scikit-learn>=1.4"]
 
 [project.scripts]
 inquiry-lab = "inquiry_lab.cli:main"

@@ -370,7 +370,8 @@ Polars DataFrameを受け取り、固定した見た目の図を保存します�
 
 | 用途 | 関数 | APIの詳細・使用例 |
 |---|---|---|
-| 一般の数値列・分類スコアの分布 | `plot_histogram` | [ヒストグラム](skills/inquiry-lab-api/references/histogram.md) |
+| 一般の数値列・分類スコアの分布（箱ひげ図付き） | `plot_histogram` | [ヒストグラム](skills/inquiry-lab-api/references/histogram.md) |
+| 数値列どうしの関係 | `plot_scatter` | [散布図](skills/inquiry-lab-api/references/scatter.md) |
 | 2値分類のROC曲線・AUC | `plot_roc_curve` | [分類モデルのグラフ](skills/inquiry-lab-api/references/classifier.md) |
 | 予測確率の較正とビンごとの件数 | `plot_calibration_curve` | [分類モデルのグラフ](skills/inquiry-lab-api/references/classifier.md) |
 
