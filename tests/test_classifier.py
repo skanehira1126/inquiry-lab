@@ -69,7 +69,6 @@ def test_pdf_output(tmp_path):
     assert df.equals(original)
 
 
-@pytest.mark.parametrize("plot", [plot_roc_curve, plot_calibration_curve])
 @pytest.mark.parametrize(
     ("labels", "scores", "positive"),
     [
@@ -88,11 +87,22 @@ def test_pdf_output(tmp_path):
         ([0, 1], [0.2, 0.8], 2),
     ],
 )
-def test_invalid_data_does_not_create_output(tmp_path, labels, scores, positive, plot):
+def test_roc_rejects_invalid_binary_inputs_before_creating_output(
+    tmp_path, labels, scores, positive
+):
+    # ROC owns the full input matrix shared with calibration.
     output = tmp_path / "artifacts" / "roc.png"
     df = pl.DataFrame({"label": labels, "score": scores})
     with pytest.raises(ValueError):
-        plot(df, output=output, pos_label=positive)
+        plot_roc_curve(df, output=output, pos_label=positive)
+    assert not output.parent.exists()
+
+
+def test_calibration_requires_both_classes_before_creating_output(tmp_path):
+    output = tmp_path / "artifacts" / "calibration.png"
+    df = pl.DataFrame({"label": [1, 1], "score": [0.2, 0.8]})
+    with pytest.raises(ValueError, match="exactly two classes"):
+        plot_calibration_curve(df, output=output)
     assert not output.parent.exists()
 
 

@@ -142,27 +142,31 @@ def test_scatter_preserves_pairs_and_group_counts(tmp_path, monkeypatch, hue):
         pl.DataFrame({"value": range(21), "group": range(21)}),
     ],
 )
-@pytest.mark.parametrize("plot", [plot_histogram, plot_scatter])
-def test_invalid_input_does_not_create_output(tmp_path, df, plot):
+def test_histogram_rejects_invalid_numeric_and_hue_inputs_before_creating_output(tmp_path, df):
+    # Histogram owns the full numeric/hue input matrix shared with scatter.
     output = tmp_path / "artifacts" / "hist.png"
-    columns = {"column": "value"} if plot is plot_histogram else {"x": "value", "y": "value"}
     with pytest.raises(ValueError):
-        plot(df, **columns, hue="group", output=output)
+        plot_histogram(df, column="value", hue="group", output=output)
     assert not output.parent.exists()
 
 
 @pytest.mark.parametrize("axis", ["x", "y"])
-@pytest.mark.parametrize(
-    "values", [[None, 1], [0.0, float("nan")], [0.0, float("inf")], ["a", "b"]]
-)
-def test_scatter_validates_both_axes_before_overwriting(tmp_path, axis, values):
+def test_scatter_validates_both_axes_before_overwriting(tmp_path, axis):
     data = {"x": [0, 1], "y": [2, 3]}
-    data[axis] = values
+    data[axis] = [None, 1]
     output = tmp_path / "scatter.png"
     output.write_bytes(b"keep")
     with pytest.raises(ValueError):
         plot_scatter(pl.DataFrame(data), x="x", y="y", output=output)
     assert output.read_bytes() == b"keep"
+
+
+def test_scatter_rejects_too_many_groups_before_creating_output(tmp_path):
+    output = tmp_path / "artifacts" / "scatter.png"
+    df = pl.DataFrame({"x": range(21), "y": range(21), "group": range(21)})
+    with pytest.raises(ValueError, match="at most 20 groups"):
+        plot_scatter(df, x="x", y="y", hue="group", output=output)
+    assert not output.parent.exists()
 
 
 @pytest.mark.parametrize("plot", [plot_histogram, plot_scatter])

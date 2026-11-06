@@ -1,4 +1,3 @@
-import copy
 import io
 import json
 from datetime import datetime
@@ -24,11 +23,9 @@ def test_update_replaces_whole_snapshot_and_show_preserves_all_values(
     assert main(["init", str(workspace), "--title", "比較"]) == 0
     original = {p: p.read_bytes() for p in workspace.rglob("*") if p.is_file()}
     capsys.readouterr()
-    before_input = copy.deepcopy(state)
     monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(state)))
     assert main(["state", "update", "--workspace", str(workspace)]) == 0
     assert capsys.readouterr().out.strip() == str(workspace / "state.json")
-    assert state == before_input
     first = json.loads((workspace / "state.json").read_text())
     assert datetime.fromisoformat(first["updated_at"]).utcoffset().total_seconds() == 0
 

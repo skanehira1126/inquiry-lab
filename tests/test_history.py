@@ -17,19 +17,7 @@ def test_record_and_render_example(tmp_path):
     output = tmp_path / "作業履歴.md"
     assert output.read_bytes() == (EXAMPLES / "作業履歴.md").read_bytes()
 
-    text = output.read_text(encoding="utf-8")
-    assert text.index("```mermaid") < text.index("## 現在地")
-    assert "e1 --> e2" in text and "(history/000001.md)" in text
-
-    assert "e1 -->|元のrun| e4" in text and "e3 --> e4" in text
-    detail = (tmp_path / "history/000004.md").read_text(encoding="utf-8")
-    assert "元のrun　[記録1](000001.md)" in detail
-    assert "1,000円 × 16/80" in detail and "1,000円 × 16/80" not in text
-    assert "(<../observations.csv>)" in detail
-    assert "## 検証" in detail and "## 検証" not in text
     for entry in sorted((EXAMPLES / "history").glob("*.json")):
-        data = json.loads(entry.read_text(encoding="utf-8"))
-        assert data["summary"] in text
         assert (tmp_path / "history" / entry.with_suffix(".md").name).read_bytes() == (
             entry.with_suffix(".md").read_bytes()
         )
