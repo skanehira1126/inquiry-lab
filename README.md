@@ -8,6 +8,7 @@ EDAは表形式・イベントと反復観測・予測準備の参照を組み�
 
 CLIは `init` で分析先と最初のrun、`run new` で追加runのテンプレートを展開し、
 `history` で作業履歴の記録とMarkdown出力を行います。
+`data inspect / values` はCSV・TSV・Parquetの基本確認を行い、EDAで読む範囲・欠損・表示の省略を揃えます。
 Pythonスクリプト、SQL、Notebookなど任意の方法で分析し、問いと根拠、現在の結論を
 Markdownでつなげて残せます。CLIは分析の実行、結果の検証・採用、完了状態を
 管理しません。段階別Skill、分析レポートの自動生成、MCPサーバー、
@@ -45,6 +46,7 @@ inquiry-lab/
 │   │   ├── assets/result.md       # 単発EDAの本文と作業記録
 │   │   └── references/
 │   │       ├── tabular.md
+│   │       ├── data-inspection.md # CLIによる基本確認と結果の読み方
 │   │       ├── events.md
 │   │       ├── prediction.md
 │   │       └── request.md         # 呼出元との依頼・返却の契約
@@ -173,7 +175,32 @@ uv tool install .
 
 インストール後は、任意の作業ディレクトリから
 `inquiry-lab init <directory> --title "分析タイトル"` で利用できます。
-実行時の外部Python依存はなく、Notebook Workbenchのインストールも不要です。
+Parquet対応のPyArrowを依存として導入します。Notebook Workbenchのインストールは不要です。
+
+## データの基本確認
+
+Notebookや分析ワークスペースを作らず、単一のローカルCSV・TSV・Parquetを読み取り専用で確認できます。
+EDAでは[データの基本確認](skills/eda/references/data-inspection.md)を使い、観測範囲と読み方を共通化します。
+
+```bash
+inquiry-lab data inspect data.parquet --head 5 --json
+inquiry-lab data inspect data.csv --columns category value --null-counts --json
+inquiry-lab data values data.parquet --columns category --by period --limit 10 --group-limit 20 --json
+```
+
+`inspect` は列・型・行数・先頭行を返します。欠損数は `--null-counts` 指定時だけ全件集計し、
+未指定は未集計と明示します。CSV/TSVは文字列を保持し空文字を欠損と数え、Parquetは保存された型を保持しnullを数えます。
+CSV/TSVは行数取得にも全件走査が必要です。Parquetの行数はメタデータ由来で、先頭行は代表標本ではありません。
+
+`values` は列ごとの値と件数を全件集計し、`--by` でグループを指定できます。
+表示はJSON表現の辞書順で、頻度上位ではありません。省略件数も返します。
+表示上限は走査量や集計メモリの上限ではないため、高カーディナリティの列は対象と費用を確認して選びます。
+テキスト表示は長い値を省略し、`--json` は値と観測範囲を構造化して返します。
+
+CSV/TSVはヘッダー付きUTF-8（BOM可）が対象です。ディレクトリのParquet dataset、URL、globは扱いません。
+成功時は結果を標準出力へ返し、不正な入力データ・I/Oエラーは終了コード1、引数エラーは2で
+標準エラーへ報告します。`--json` は成功時の結果形式を選び、エラーは既存CLIと同じテキスト形式です。
+入力ファイルは変更せず、runや履歴は自動作成しません。EDAの中で使う場合は結果と実行条件を該当runに残します。
 
 ## 生成されるワークスペース
 
@@ -291,7 +318,12 @@ EDA用run雛形の正本は `skills/eda/assets/result.md` です。変更時は�
 `src/inquiry_lab/templates/eda-result.md` へコピーします。テストで両者の一致を検査します。
 開発方針、変更時に守る契約、配布物の確認方法は [AGENTS.md](AGENTS.md) を参照してください。
 
-## テンプレートとSkillの由来
+## コード・テンプレート・Skillの由来
+
+`src/inquiry_lab/data.py` と `tests/test_data.py` はNotebook Workbenchの `data_ops.py` と
+対応テストを基にしています（Apache-2.0、commit `a2ad2658e29034acfd15e51b8ee81df00f6a7cf7`）。
+2026-11-06時点のローカル作業ツリーを確認し、データの取得・JSON表現・集計範囲を引き継ぎ、
+エラー処理とCLI登録をinquiry-labの契約へ合わせました。Notebook Workbench側の同等CLIは維持します。
 
 文章テンプレートはNotebook Workbenchの`analysis_templates`を基にしています
 （commit `1b2fb66572a1e55fd504b6161a1cf156d09c70e9`、Apache-2.0）。

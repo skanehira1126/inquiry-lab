@@ -7,10 +7,12 @@
 inquiry-labは、分析の進行を支援するCodexプラグインと、分析の問い・試行結果・統合レポートを
 記録するワークスペースのテンプレートを展開するPython CLI。
 分析にはPython、SQL、Notebookなど任意の実行手段を使える。
-コマンドは `inquiry-lab init`、`inquiry-lab run new`、`inquiry-lab history record`、`inquiry-lab history render`。
+コマンドは `inquiry-lab init`、`inquiry-lab run new`、`inquiry-lab history record`、`inquiry-lab history render`、`inquiry-lab data inspect`、`inquiry-lab data values`。
 利用方法と生成物の構成は [README.md](README.md) を参照する。
 
 現行CLIはテンプレート展開、runの自動採番、試行・判断のJSON記録、作業履歴のMarkdown出力を扱う。分析の実行、結果の採用、完了状態、履歴sequenceの自動採番は管理しない。
+`data` はCSV・TSV・Parquetの読み取り専用の基本確認を扱い、EDAの観測範囲・欠損定義・省略の契約を揃える。
+Notebook Workbenchにも同等CLIを残せるが、inquiry-labは実行時に依存しない。
 `skills/analyze/` が分析の進行・記録・最終レポートを扱う。
 `skills/eda/` は1shotの探索を担い、表形式・イベントと反復観測・予測準備の参照を組み合わせ、一括で観察・報告する。
 `skills/eda-loop/` は各回のEDAを独立したサブエージェントへ委任し、親が次の依頼・方向転換・停止を判断する。
@@ -34,6 +36,9 @@ inquiry-labは、分析の進行を支援するCodexプラグインと、分析�
 - `src/inquiry_lab/cli.py`：引数解析とCLIハンドラー。
   `argparse` の `set_defaults(func=...)` で登録し、`func(**args)` で呼び出す構成を保つ。
 - `src/inquiry_lab/history.py`：履歴JSONの検査・保存と、短い `作業履歴.md`・各ループの詳細 `history/NNNNNN.md` の生成。
+- `src/inquiry_lab/data.py`：単一ファイルの基本確認と値の全件集計。PyArrowでParquetを読み、CSV/TSVの文字列を保持する。
+  `skills/eda/references/data-inspection.md` に結果の読み方と範囲を集約する。
+  表示上限と走査範囲を区別し、未集計の欠損をゼロと扱わない。テストは `tests/test_data.py`。
 - `src/inquiry_lab/workspace.py`：テンプレート読込と展開。
   テンプレートは `importlib.resources` から読み、インストール先や実行時のcwdに依存させない。
 - `src/inquiry_lab/templates/`：依頼、試行結果、統合レポートのMarkdownテンプレート。
@@ -56,7 +61,7 @@ inquiry-labは、分析の進行を支援するCodexプラグインと、分析�
 - `skills/error-analysis/SKILL.md`：計画した範囲の誤差を一括診断し、報告して終了する手順。
   各Skillはanalyzeの共通記録を使い、テーマ追加では独立したSkill・雛形とanalyzeの選択表を更新する。
 - `pyproject.toml`：Python 3.12以降、Flitによる配布、pytestとRuffによる検証を定義する。
-  実行時の外部Python依存は現在ない。依存を追加する場合は必要性と配布への影響を確認する。
+  実行時の外部Python依存はParquet対応のPyArrow。依存を追加する場合は必要性と配布への影響を確認する。
 
 ## 変更時に守る契約
 

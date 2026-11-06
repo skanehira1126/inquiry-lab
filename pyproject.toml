@@ -9,7 +9,7 @@ description = "Execution-independent analysis workspace templates"
 readme = "README.md"
 requires-python = ">=3.12"
 license = { file = "LICENSE" }
-dependencies = []
+dependencies = ["pyarrow>=19"]
 
 [project.scripts]
 inquiry-lab = "inquiry_lab.cli:main"
