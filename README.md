@@ -9,6 +9,7 @@ EDAは表形式・イベントと反復観測・予測準備の参照を組み�
 CLIは `init` で分析先と最初のrun、`run new` で追加runのテンプレートを展開し、
 `history` で作業履歴の記録とMarkdown出力を行います。
 `data inspect / values` はCSV・TSV・Parquetの基本確認を行い、EDAで読む範囲・欠損・表示の省略を揃えます。
+Python APIの `visualize` は、固定した見た目で分析用の図を描画・保存します。
 Pythonスクリプト、SQL、Notebookなど任意の方法で分析し、問いと根拠、現在の結論を
 Markdownでつなげて残せます。CLIは分析の実行、結果の検証・採用、完了状態を
 管理しません。段階別Skill、分析レポートの自動生成、MCPサーバー、
@@ -69,7 +70,7 @@ inquiry-lab/
 │       ├── agents/openai.yaml
 │       ├── references/diagnostics.md
 │       └── assets/report.md
-├── src/inquiry_lab/                # Python CLIと文章テンプレート
+├── src/inquiry_lab/                # Python CLI・可視化API・文章テンプレート
 ├── tests/
 └── pyproject.toml
 ```
@@ -294,6 +295,40 @@ uv run inquiry-lab history render --workspace analyses/missing
 `run new` は既存の分析先の `runs/` に新しいrunだけを作成します。`runs/` がない場合やシンボリックリンクの場合、
 依頼文書が存在しない場合は拒否します。既存の番号を避けて作成し、空ディレクトリやリンクも上書きしません。
 展開中の書込失敗では、`init` は作成途中のワークスペース、`run new` は今回作ったrunだけを除去します。
+
+## PythonからROC曲線を保存する
+
+可視化を使う分析環境へ、追加依存を含めてインストールします。CLIだけの利用では不要です。
+
+```bash
+uv pip install '.[visualize]'
+```
+
+上記はリポジトリ直下で実行します。別の環境では `.` をこのリポジトリのパスに置き換えます。
+
+```python
+import polars as pl
+
+from inquiry_lab.visualize.ml.classifier import plot_roc_curve
+
+df = pl.DataFrame({"label": [0, 0, 1, 1], "score": [0.1, 0.4, 0.35, 0.8]})
+plot_roc_curve(df, output="runs/001/artifacts/roc.png")
+```
+
+2値分類のROC曲線、AUC、対角の基準線を描いて保存し、保存先の `Path` を返します。
+入力はPolars DataFrameで、既定の列名は正解が `label`、スコアが `score` です。
+別の列名なら `label="actual", score="prediction"` のように指定します。
+指定した2列だけを使い、入力DataFrameは変更しません。正解には両クラスが必要です。
+スコアは陽性クラスの確率または決定スコアを渡し、大きいほど陽性とします。
+`predict_proba` の結果は陽性クラスの値をスコア列に入れてください。
+陽性ラベルは既定で `1`、別のラベルなら `pos_label="yes"` などで指定します。
+欠損・非有限スコア・単一クラス・多クラスの入力はエラーにし、暗黙の除外や補完は行いません。
+
+配色・サイズ・軸・凡例は固定し、呼出元のmatplotlib設定に依存させません。
+保存先の拡張子は `.png`（900×900 px）、`.svg`、`.pdf` に対応します。
+親ディレクトリは自動作成し、同じ保存先のファイルは上書きします。
+描画用のFigureやAxes、見た目を変更する引数は公開しません。
+実装は `src/inquiry_lab/visualize/ml/classifier.py` にあります。
 
 ## 開発
 

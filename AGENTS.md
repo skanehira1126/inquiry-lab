@@ -13,6 +13,8 @@ inquiry-labは、分析の進行を支援するCodexプラグインと、分析�
 現行CLIはテンプレート展開、runの自動採番、試行・判断のJSON記録、作業履歴のMarkdown出力を扱う。分析の実行、結果の採用、完了状態、履歴sequenceの自動採番は管理しない。
 `data` はCSV・TSV・Parquetの読み取り専用の基本確認を扱い、EDAの観測範囲・欠損定義・省略の契約を揃える。
 Notebook Workbenchにも同等CLIを残せるが、inquiry-labは実行時に依存しない。
+`visualize` はPython APIとして、見た目を固定した分析用グラフの描画・保存を扱う。
+`visualize.ml.classifier.plot_roc_curve` は2値分類のROC曲線とAUCを保存する。
 `skills/analyze/` が分析の進行・記録・最終レポートを扱う。
 `skills/eda/` は1shotの探索を担い、表形式・イベントと反復観測・予測準備の参照を組み合わせ、一括で観察・報告する。
 `skills/eda-loop/` は各回のEDAを独立したサブエージェントへ委任し、親が次の依頼・方向転換・停止を判断する。
@@ -41,6 +43,10 @@ Notebook Workbenchにも同等CLIを残せるが、inquiry-labは実行時に依
   表示上限と走査範囲を区別し、未集計の欠損をゼロと扱わない。テストは `tests/test_data.py`。
 - `src/inquiry_lab/workspace.py`：テンプレート読込と展開。
   テンプレートは `importlib.resources` から読み、インストール先や実行時のcwdに依存させない。
+- `src/inquiry_lab/visualize/ml/classifier.py`：分類モデル向けの描画・保存。
+  配色・レイアウトを固定し、Figure・Axesや任意の描画オプションを公開しない。
+  Polars DataFrameと列名を受け取り、既定の列名は `label` と `score`。
+  テストは `tests/test_classifier.py`。描画依存は `visualize` extraに分離する。
 - `src/inquiry_lab/templates/`：依頼、試行結果、統合レポートのMarkdownテンプレート。
   汎用雛形は英語、EDA用run雛形は日本語で、利用者が記入する言語は自由。
   EDAの正本は `skills/eda/assets/result.md` とし、変更時は同じ内容を `templates/eda-result.md` へコピーして一致を検証する。
@@ -61,7 +67,8 @@ Notebook Workbenchにも同等CLIを残せるが、inquiry-labは実行時に依
 - `skills/error-analysis/SKILL.md`：計画した範囲の誤差を一括診断し、報告して終了する手順。
   各Skillはanalyzeの共通記録を使い、テーマ追加では独立したSkill・雛形とanalyzeの選択表を更新する。
 - `pyproject.toml`：Python 3.12以降、Flitによる配布、pytestとRuffによる検証を定義する。
-  実行時の外部Python依存はParquet対応のPyArrow。依存を追加する場合は必要性と配布への影響を確認する。
+  基本の実行時依存はParquet対応のPyArrow。可視化用extraはmatplotlib・NumPy・Polars・scikit-learn。
+  開発環境ではextraも導入する。依存を追加する場合は必要性と配布への影響を確認する。
 
 ## 変更時に守る契約
 
