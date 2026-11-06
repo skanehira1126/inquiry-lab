@@ -7,6 +7,8 @@ from inquiry_lab import __version__
 from inquiry_lab.data import DataArgumentError, inspect_data, list_data_values, render_data_text
 from inquiry_lab.history import record_entry, render_history
 from inquiry_lab.json_inspection import JsonArgumentError, inspect_json
+from inquiry_lab.json_parsing import parse_json
+from inquiry_lab.state import read_state, state_context, update_state
 from inquiry_lab.workspace import create_run, initialize_workspace
 
 
@@ -29,6 +31,19 @@ def cli_history_record(workspace: Path, input_file: Path | None) -> None:
 
 def cli_history_render(workspace: Path) -> None:
     print(render_history(workspace))
+
+
+def cli_state_update(workspace: Path, input_file: Path | None) -> None:
+    source = sys.stdin.read() if input_file is None else input_file.read_text(encoding="utf-8-sig")
+    print(update_state(workspace, parse_json(source)))
+
+
+def cli_state_context(workspace: Path) -> None:
+    print(json.dumps(state_context(workspace), ensure_ascii=False, allow_nan=False))
+
+
+def cli_state_show(workspace: Path) -> None:
+    print(json.dumps(read_state(workspace), ensure_ascii=False, allow_nan=False, indent=2))
 
 
 def cli_json_inspect(path: Path, keys: list[str], head: int) -> None:
@@ -126,6 +141,20 @@ def build_parser() -> argparse.ArgumentParser:
     render = actions.add_parser("render", help="generate 作業履歴.md from history entries")
     render.add_argument("--workspace", type=Path, required=True)
     render.set_defaults(func=cli_history_render)
+    state = commands.add_parser("state", help="save analysis state and restore hook context")
+    state_actions = state.add_subparsers(required=True)
+    update = state_actions.add_parser(
+        "update", help="validate and replace the complete state.json"
+    )
+    update.add_argument("--workspace", type=Path, required=True)
+    update.add_argument("--input", type=Path, dest="input_file", help="JSON file (default: stdin)")
+    update.set_defaults(func=cli_state_update)
+    show = state_actions.add_parser("show", help="show the complete saved state.json (read-only)")
+    show.add_argument("--workspace", type=Path, required=True)
+    show.set_defaults(func=cli_state_show)
+    context = state_actions.add_parser("context", help="emit SessionStart hook JSON (read-only)")
+    context.add_argument("--workspace", type=Path, required=True)
+    context.set_defaults(func=cli_state_context)
     return parser
 
 

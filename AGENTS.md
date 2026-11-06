@@ -7,10 +7,10 @@
 inquiry-labは、分析の進行を支援するCodexプラグインと、分析の問い・試行結果・統合レポートを
 記録するワークスペースのテンプレートを展開するPython CLI。
 分析にはPython、SQL、Notebookなど任意の実行手段を使える。
-コマンドは `inquiry-lab init`、`inquiry-lab run new`、`inquiry-lab history record`、`inquiry-lab history render`、`inquiry-lab data inspect`、`inquiry-lab data values`、`inquiry-lab json inspect`。
+コマンドは `inquiry-lab init`、`inquiry-lab run new`、`inquiry-lab history record`、`inquiry-lab history render`、`inquiry-lab data inspect`、`inquiry-lab data values`、`inquiry-lab json inspect`、`inquiry-lab state update / show / context`。
 利用方法と生成物の構成は [README.md](README.md) を参照する。
 
-現行CLIはテンプレート展開、runの自動採番、試行・判断のJSON記録、作業履歴のMarkdown出力を扱う。分析の実行、結果の採用、完了状態、履歴sequenceの自動採番は管理しない。
+現行CLIはテンプレート展開、runの自動採番、試行・判断のJSON記録、作業履歴のMarkdown出力、全体stateの保存・復元を扱う。分析の実行、結果の採用・完了の判定、履歴sequenceの自動採番は管理しない。
 `data` はCSV・TSV・Parquetの読み取り専用の基本確認を扱い、EDAの観測範囲・欠損定義・省略の契約を揃える。
 `json inspect` はJSONの指定階層の直下を表示する。`--key` はドット区切りと繰り返し指定に対応し、ネストした値は型と件数だけを示す。
 Notebook Workbenchにも同等CLIを残せるが、inquiry-labは実行時に依存しない。
@@ -49,6 +49,12 @@ Notebook Workbenchにも同等CLIを残せるが、inquiry-labは実行時に依
 - `src/inquiry_lab/json_inspection.py`：JSONの読み取り専用の階層参照と表示。
   キー名にドットを含むJSONと重複キーを拒否する。全体を読み込み、表示項目数と長い値を制限して省略を明示する。
   テストは `tests/test_json_inspection.py`。
+- `src/inquiry_lab/json_parsing.py`：inspectionとstateが共有する重複・ドット付きキーの拒否。
+- `src/inquiry_lab/state.py`：全体の目標・終了条件と現在の個別作業を`state.json`へ保存する。
+  全体置換前にschemaを検査し、UTCの更新日時を付け、同一ディレクトリ内から置き換える。
+  showは状態全体を省略せず表示する。contextは明示したworkspaceからSessionStart用JSONを返す。
+  更新者はanalyzeの一人とし、子はrunを返す。状態遷移や完了の自動判定はしない。
+  `skills/analyze/references/state.md`が項目・更新・復元・任意hook設定の正本。テストは`tests/test_state.py`。
 - `src/inquiry_lab/workspace.py`：テンプレート読込と展開。
   テンプレートは `importlib.resources` から読み、インストール先や実行時のcwdに依存させない。
 - `src/inquiry_lab/visualize/common.py`：MLに限らない汎用の描画・保存。
@@ -100,6 +106,7 @@ Notebook Workbenchにも同等CLIを残せるが、inquiry-labは実行時に依
   `req-001` と `run-001` は文書を対応させるラベルであり、分析状態ではない。runの番号と履歴sequenceは別物として扱う。
   `init` と `run new` の `--template eda` はEDA用のresult.mdを展開する。依頼文書とoutput.mdは共通雛形を使う。
 - Notebook、実行スクリプト、`analysis.yaml`、`run.yaml` は生成しない。
+  `state.json`は初回の`state update`で作り、init/run newの生成物は増やさない。
   未実装の検証markerや採用・完了状態を、テンプレートだけで利用者に要求しない。
 - テンプレート変更では、問いから結果・根拠・統合レポートへの参照を保つ。
   入力の版、手順、パラメータ、環境、保存した出力を記録できることを確認する。

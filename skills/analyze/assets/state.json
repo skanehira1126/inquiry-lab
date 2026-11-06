@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "goal": "モデル変更の候補を採用するか、現行を維持するか判断する。",
+  "status": "in_progress",
+  "completion_criteria": [
+    {
+      "condition": "合意した評価条件で候補と現行を比較し、採用・見送りの根拠を示せる。",
+      "status": "unknown",
+      "evidence": []
+    }
+  ],
+  "current_conclusion": "未評価。依頼と既存の評価手順を確認する。",
+  "current_task": {
+    "goal": "比較に使うデータと評価条件を整理する。",
+    "done_when": "利用できるデータ、分割、指標、改善幅と予算が依頼文書に記録されている。",
+    "status": "planned",
+    "run": "runs/001",
+    "progress": "未着手。学習・評価は実行していない。"
+  },
+  "next_action": "依頼文書と既存コードを確認し、未決の評価条件を整理する。",
+  "constraints": ["最終ホールドアウトは探索に使わない。"],
+  "blockers": [],
+  "history_sequence": 0,
+  "references": [
+    {"label": "依頼と判断基準", "target": "requests/001-initial.md"}
+  ]
+}

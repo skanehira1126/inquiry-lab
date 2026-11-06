@@ -9,12 +9,13 @@ EDAは表形式・イベントと反復観測・予測準備の参照を組み�
 
 CLIは `init` で分析先と最初のrun、`run new` で追加runのテンプレートを展開し、
 `history` で作業履歴の記録とMarkdown出力を行います。
+`state update / show / context` は分析全体の現在状態を保存・表示し、SessionStart hookへ復元用の文脈を渡します。
 `data inspect / values` はCSV・TSV・Parquetの基本確認を行い、EDAで読む範囲・欠損・表示の省略を揃えます。
 `json inspect` はJSONの指定階層の直下を表示し、設定や分析結果を確認します。
 Python APIの `visualize` は、固定した見た目で分析用の図を描画・保存します。
 Pythonスクリプト、SQL、Notebookなど任意の方法で分析し、問いと根拠、現在の結論を
-Markdownでつなげて残せます。CLIは分析の実行、結果の検証・採用、完了状態を
-管理しません。段階別Skill、分析レポートの自動生成、MCPサーバー、
+Markdownでつなげて残せます。CLIはエージェントが判断した状態を保存しますが、分析の実行、結果の検証・採用、完了を
+自動判定しません。段階別Skill、分析レポートの自動生成、MCPサーバー、
 独自モデルループは未実装です。
 
 ## プラグインの導入
@@ -253,6 +254,7 @@ analyses/sales-change/
 
 汎用テンプレート本文は英語、EDA用run雛形は日本語ですが、記入する言語は自由です。
 Notebook、Pythonスクリプト、`analysis.yaml`、`run.yaml` は生成しません。
+`state.json`は目的・終了条件を整理した後に`state update`で作成します。`init`では生成しません。
 
 最初のrunをEDA用の構成で作る場合は、次のように指定します。
 
@@ -319,6 +321,29 @@ uv run inquiry-lab history render --workspace analyses/missing
 - runの出発点にした過去のrunがあれば、その `sequence` を `base_run` に指定します。最初の試行や独立した試行は省略できます。[run-003の例](docs/examples/history/000004.json)は、原票を調べたrun-002（記録3）が行き詰まり、run-001（記録1）の集計から別の仮説を試したため、`"base_run": 1` と `"depends_on": [3]` を記録しています。
 - 明示した依存関係があると、生成文書の冒頭にMermaidの図が出ます。線で結ばれた記録を表示し、各記録の詳細にも元のrunと依存元へのリンクを残します。CLIはMarkdownに `mermaid` コードブロックを書き、図の描画は対応するエディタやビューアが行います。
 - `render` は1回で、短い `作業履歴.md` と各記録の詳細 `history/NNNNNN.md` を生成します。履歴には依存図・現在地・作業順の要約を置き、詳細にはJSONの各項目を表示します。ローカルの参考リンクは出力先に合わせて調整します。訂正は正本のJSONを編集し、両方を再生成します。
+
+## 分析全体の状態とcompaction後の復元
+
+`state.json`には全体の目標・終了条件と、現在の個別作業・次の行動を分けて残します。
+[入力例](skills/analyze/assets/state.json)を案件に合わせて記入し、全体を渡して更新します。
+
+```bash
+inquiry-lab state update --workspace analyses/sales-change --input /tmp/analysis-state.json
+inquiry-lab state show --workspace analyses/sales-change
+inquiry-lab state context --workspace analyses/sales-change
+```
+
+`update`は検査後にファイルを置き換え、更新日時を付けます。`--input`省略時は標準入力を読みます。
+`show`はネスト・件数・長さを省略せず、保存済みの状態全体をJSONで表示します。
+`context`はCodexの`SessionStart`（`compact`）へ渡すJSONを返す読み取り専用コマンドです。
+状態が読めない場合は復旧案内、履歴の最大番号と反映済み番号が異なる場合は照合の案内を返します。
+長いstateは本文を部分的に切り捨てず、保存先と`show`での確認を案内します。
+
+依頼文書は合意条件、historyは判断の経緯、runは実行根拠として残し、stateから参照します。
+更新するのはanalyzeの担当者で、個別作業の開始前・判断後・条件変更後・中断時に保存します。
+CLIは状態遷移や終了を自動判定しません。同時更新は後の保存が優先されるため、更新者を一人にします。
+JSONの項目、再開時の照合、hookの設定例は[全体状態の手順](skills/analyze/references/state.md)を参照してください。
+hookは設定と信頼操作が必要です。プラグインやCLIの導入だけでは有効になりません。
 
 ## CLIの動作
 

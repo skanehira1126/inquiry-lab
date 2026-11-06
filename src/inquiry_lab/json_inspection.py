@@ -5,24 +5,11 @@ from itertools import islice
 from pathlib import Path
 from typing import Any
 
+from inquiry_lab.json_parsing import parse_json
+
 
 class JsonArgumentError(ValueError):
     """Invalid JSON selection or display options (CLI exit code 2)."""
-
-
-def _read_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
-    result = {}
-    for key, value in pairs:
-        if "." in key:
-            raise ValueError(f"JSON keys containing '.' are not supported: {key!r}")
-        if key in result:
-            raise ValueError(f"duplicate JSON key: {key!r}")
-        result[key] = value
-    return result
-
-
-def _reject_constant(value: str) -> None:
-    raise ValueError(f"invalid JSON constant: {value}")
 
 
 def _display(value: Any) -> str:
@@ -47,8 +34,7 @@ def inspect_json(path: Path, *, keys: list[str] | None = None, head: int = 20) -
     if any(not segment for segment in segments):
         raise JsonArgumentError("--key must contain non-empty dot-separated segments")
 
-    with path.open(encoding="utf-8-sig") as source:
-        value = json.load(source, object_pairs_hook=_read_object, parse_constant=_reject_constant)
+    value = parse_json(path.read_text(encoding="utf-8-sig"))
 
     for segment in segments:
         if isinstance(value, dict):
