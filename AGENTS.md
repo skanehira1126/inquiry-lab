@@ -15,6 +15,7 @@ inquiry-labは、分析の進行を支援するCodexプラグインと、分析�
 Notebook Workbenchにも同等CLIを残せるが、inquiry-labは実行時に依存しない。
 `visualize` はPython APIとして、見た目を固定した分析用グラフの描画・保存を扱う。
 `visualize.ml.classifier.plot_roc_curve` は2値分類のROC曲線とAUCを保存する。
+同モジュールの `plot_score_histogram` はスコア分布を保存し、任意の `hue` 列で色分けする。
 `skills/analyze/` が分析の進行・記録・最終レポートを扱う。
 `skills/eda/` は1shotの探索を担い、表形式・イベントと反復観測・予測準備の参照を組み合わせ、一括で観察・報告する。
 `skills/eda-loop/` は各回のEDAを独立したサブエージェントへ委任し、親が次の依頼・方向転換・停止を判断する。
@@ -46,6 +47,8 @@ Notebook Workbenchにも同等CLIを残せるが、inquiry-labは実行時に依
 - `src/inquiry_lab/visualize/ml/classifier.py`：分類モデル向けの描画・保存。
   配色・レイアウトを固定し、Figure・Axesや任意の描画オプションを公開しない。
   Polars DataFrameと列名を受け取り、既定の列名は `label` と `score`。
+  ヒストグラムは全体のスコアからNumPyの `auto` でビンを決め、群間で共有する。
+  縦軸は件数で、`hue` のカテゴリは最大20群。
   テストは `tests/test_classifier.py`。描画依存は `visualize` extraに分離する。
 - `src/inquiry_lab/templates/`：依頼、試行結果、統合レポートのMarkdownテンプレート。
   汎用雛形は英語、EDA用run雛形は日本語で、利用者が記入する言語は自由。

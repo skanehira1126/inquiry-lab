@@ -296,7 +296,7 @@ uv run inquiry-lab history render --workspace analyses/missing
 依頼文書が存在しない場合は拒否します。既存の番号を避けて作成し、空ディレクトリやリンクも上書きしません。
 展開中の書込失敗では、`init` は作成途中のワークスペース、`run new` は今回作ったrunだけを除去します。
 
-## PythonからROC曲線を保存する
+## Pythonから分類モデルのグラフを保存する
 
 可視化を使う分析環境へ、追加依存を含めてインストールします。CLIだけの利用では不要です。
 
@@ -329,6 +329,24 @@ plot_roc_curve(df, output="runs/001/artifacts/roc.png")
 親ディレクトリは自動作成し、同じ保存先のファイルは上書きします。
 描画用のFigureやAxes、見た目を変更する引数は公開しません。
 実装は `src/inquiry_lab/visualize/ml/classifier.py` にあります。
+
+スコア分布には `plot_score_histogram` を使います。
+
+```python
+from inquiry_lab.visualize.ml.classifier import plot_score_histogram
+
+plot_score_histogram(df, output="runs/001/artifacts/scores.png")
+plot_score_histogram(df, hue="label", output="runs/001/artifacts/scores-by-label.png")
+```
+
+スコア列は既定で `score`、変更するときは `score="prediction"` のように指定します。
+`hue` を省略すると全体、列名を指定すると値ごとに色分けしたヒストグラムを重ねて描きます。
+全体のスコアからNumPyの `auto`（スタージェス則とFreedman–Diaconis則）で
+等幅のビンを自動決定し、すべての群で境界を共有します。
+縦軸は件数で、積み上げや正規化は行いません。凡例には群別の件数を添えます。
+`hue` は数値でもカテゴリとして扱い、値順で配色します。判別できる配色を保つため最大20群です。
+指定列のnull・NaN・非有限値を拒否し、指定していない列の欠損は無視します。
+保存形式・サイズ・親ディレクトリの作成と上書きはROC曲線と共通です。
 
 ## 開発
 
