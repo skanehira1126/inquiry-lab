@@ -5,12 +5,16 @@ from pathlib import Path
 
 from inquiry_lab import __version__
 from inquiry_lab.history import record_entry, render_history
-from inquiry_lab.workspace import initialize_workspace
+from inquiry_lab.workspace import create_run, initialize_workspace
 
 
-def cli_init(directory: Path, title: str) -> None:
-    path = initialize_workspace(directory, title)
+def cli_init(directory: Path, title: str, template: str) -> None:
+    path = initialize_workspace(directory, title, template)
     print(path)
+
+
+def cli_run_new(workspace: Path, title: str, request: Path, template: str) -> None:
+    print(create_run(workspace, title, request, template))
 
 
 def cli_history_record(workspace: Path, input_file: Path | None) -> None:
@@ -34,7 +38,21 @@ def build_parser() -> argparse.ArgumentParser:
     init = commands.add_parser("init", help="expand analysis templates into a new directory")
     init.add_argument("directory", type=Path, help="new workspace directory (must not exist)")
     init.add_argument("--title", required=True, help="single-line analysis title")
+    init.add_argument("--template", choices=("default", "eda"), default="default")
     init.set_defaults(func=cli_init)
+    run = commands.add_parser("run", help="prepare run documents")
+    run_actions = run.add_subparsers(required=True)
+    new = run_actions.add_parser("new", help="create the next numbered run without overwriting")
+    new.add_argument("--workspace", type=Path, required=True)
+    new.add_argument("--title", required=True, help="single-line run title")
+    new.add_argument(
+        "--request",
+        type=Path,
+        default=Path("requests/001-initial.md"),
+        help="existing request document, relative to workspace or absolute",
+    )
+    new.add_argument("--template", choices=("default", "eda"), default="default")
+    new.set_defaults(func=cli_run_new)
     history = commands.add_parser("history", help="record and render analysis history")
     actions = history.add_subparsers(required=True)
     record = actions.add_parser("record", help="save a JSON history entry")

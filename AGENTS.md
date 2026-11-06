@@ -7,10 +7,10 @@
 inquiry-labは、分析の進行を支援するCodexプラグインと、分析の問い・試行結果・統合レポートを
 記録するワークスペースのテンプレートを展開するPython CLI。
 分析にはPython、SQL、Notebookなど任意の実行手段を使える。
-コマンドは `inquiry-lab init`、`inquiry-lab history record`、`inquiry-lab history render`。
+コマンドは `inquiry-lab init`、`inquiry-lab run new`、`inquiry-lab history record`、`inquiry-lab history render`。
 利用方法と生成物の構成は [README.md](README.md) を参照する。
 
-現行CLIはテンプレート展開と、試行・判断のJSON記録、作業履歴のMarkdown出力を扱う。分析の実行、結果の採用、完了状態、IDの自動採番は管理しない。
+現行CLIはテンプレート展開、runの自動採番、試行・判断のJSON記録、作業履歴のMarkdown出力を扱う。分析の実行、結果の採用、完了状態、履歴sequenceの自動採番は管理しない。
 `skills/analyze/` が分析の進行・記録・最終レポートを扱う。
 `skills/eda/` は1shotの探索を担い、表形式・イベントと反復観測・予測準備の参照を組み合わせ、一括で観察・報告する。
 `skills/eda-loop/` は各回のEDAを独立したサブエージェントへ委任し、親が次の依頼・方向転換・停止を判断する。
@@ -37,7 +37,8 @@ inquiry-labは、分析の進行を支援するCodexプラグインと、分析�
 - `src/inquiry_lab/workspace.py`：テンプレート読込と展開。
   テンプレートは `importlib.resources` から読み、インストール先や実行時のcwdに依存させない。
 - `src/inquiry_lab/templates/`：依頼、試行結果、統合レポートのMarkdownテンプレート。
-  本文は現在英語で、利用者が記入する言語は自由。
+  汎用雛形は英語、EDA用run雛形は日本語で、利用者が記入する言語は自由。
+  EDAの正本は `skills/eda/assets/result.md` とし、変更時は同じ内容を `templates/eda-result.md` へコピーして一致を検証する。
 - `tests/test_cli.py`：CLIの公開挙動、生成物、既存データの保護、展開失敗時の後始末を検証する。
 - `skills/analyze/SKILL.md`：目的・判断基準の整理と、結果に応じた分析の進行判断。
   再開に必要な情報と作業履歴の共通構成を扱う。CLIでJSONを記録してMarkdownを生成できる。
@@ -61,13 +62,17 @@ inquiry-labは、分析の進行を支援するCodexプラグインと、分析�
 
 - 展開先は新規ディレクトリに限定する。空ディレクトリ、既存ファイル、シンボリックリンク
   （リンク先が存在しないものを含む）は拒否し、既存内容を変更しない。
+  `run new` は既存の分析先の `runs/` に最大番号＋1のrunを追加する。数字だけの名前のファイル・リンクも採番対象とし、欠番は埋めない。
+  数字の名前がなければ001から始める。mkdirで番号を確保し、並行実行の衝突は次の番号で再試行する。
+  `runs/` のシンボリックリンクと、存在しない依頼文書を拒否する。依頼の相対パスは分析先基準で解決する。
 - タイトルは前後の空白を除いて空でない1行とする。検証に失敗したらディレクトリを作成しない。
-  展開中の書込失敗では、この処理が作ったワークスペースを除去する。
+  展開中の書込失敗では、initは今回作ったワークスペース、run newは今回作ったrunだけを除去する。
 - 成功時は作成先の絶対パスを標準出力へ返す。展開エラーは終了コード1、
   引数エラーは終了コード2で標準エラー出力へ報告する。
 - 生成する文書は `requests/001-initial.md`、`runs/001/result.md`、`output.md`。
   成果物用に `runs/001/artifacts/` と `report/` を作る。
-  `req-001` と `run-001` は文書を対応させるラベルであり、状態や採番の保証ではない。
+  `req-001` と `run-001` は文書を対応させるラベルであり、分析状態ではない。runの番号と履歴sequenceは別物として扱う。
+  `init` と `run new` の `--template eda` はEDA用のresult.mdを展開する。依頼文書とoutput.mdは共通雛形を使う。
 - Notebook、実行スクリプト、`analysis.yaml`、`run.yaml` は生成しない。
   未実装の検証markerや採用・完了状態を、テンプレートだけで利用者に要求しない。
 - テンプレート変更では、問いから結果・根拠・統合レポートへの参照を保つ。

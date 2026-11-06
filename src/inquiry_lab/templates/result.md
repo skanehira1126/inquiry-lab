@@ -2,8 +2,8 @@
 
 ## Request and run
 
-- Request: `req-001` ([request](../../requests/001-initial.md))
-- Run: `run-001`
+- Request: [request](<${request_link}>)
+- Run: `${run_id}`
 
 ## Summary
 
