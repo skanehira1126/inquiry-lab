@@ -5,13 +5,11 @@ import numpy as np
 import polars as pl
 import pytest
 from matplotlib import image, pyplot
-from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
 from inquiry_lab.visualize.ml.classifier import (
     plot_calibration_curve,
     plot_roc_curve,
-    plot_score_histogram,
 )
 
 
@@ -37,7 +35,7 @@ def test_roc_saves_expected_auc_and_axis_labels(tmp_path, labels, scores, positi
     assert "Chance" in svg
 
 
-@pytest.mark.parametrize("plot", [plot_roc_curve, plot_score_histogram, plot_calibration_curve])
+@pytest.mark.parametrize("plot", [plot_roc_curve, plot_calibration_curve])
 def test_png_style_is_fixed_without_changing_caller_settings_or_open_figures(
     tmp_path, monkeypatch, plot
 ):
@@ -46,13 +44,12 @@ def test_png_style_is_fixed_without_changing_caller_settings_or_open_figures(
     output = tmp_path / "custom.png"
     output.write_bytes(b"old output")
     figures_before = pyplot.get_fignums()
-    options = {"hue": "label"} if plot is plot_score_histogram else {}
-    plot(df, output=default_output, **options)
+    plot(df, output=default_output)
     monkeypatch.setitem(mpl.rcParams, "backend", "svg")
     with mpl.rc_context(
         {"axes.facecolor": "black", "font.size": 30, "text.usetex": True, "savefig.dpi": 20}
     ):
-        assert plot(df, output=str(output), **options) == output
+        assert plot(df, output=str(output)) == output
         assert mpl.rcParams["axes.facecolor"] == "black"
         assert mpl.rcParams["text.usetex"] is True
         assert mpl.rcParams["backend"] == "svg"
@@ -99,75 +96,7 @@ def test_invalid_data_does_not_create_output(tmp_path, labels, scores, positive,
     assert not output.parent.exists()
 
 
-@pytest.mark.parametrize("hue", [None, "label"])
-def test_histogram_preserves_counts_with_common_bins(tmp_path, monkeypatch, hue):
-    df = pl.DataFrame(
-        {"prediction": [1.0, 0.0, 0.0, 0.5, 0.0], "label": ["b", "a", "a", "b", "a"]}
-    )
-    original = df.clone()
-    hist = Axes.hist
-    observed = []
-
-    def capture(self, *args, **kwargs):
-        result = hist(self, *args, **kwargs)
-        observed.append(result[:2])
-        return result
-
-    monkeypatch.setattr(Axes, "hist", capture)
-    output = tmp_path / "artifacts" / "hist.svg"
-    assert plot_score_histogram(df, score="prediction", hue=hue, output=output) == output
-    assert df.equals(original)
-    expected = np.array([[3, 0, 0, 0], [0, 0, 1, 1]])
-    if hue is None:
-        expected = expected.sum(axis=0)
-    for counts, edges in observed:
-        np.testing.assert_array_equal(counts, expected)
-        np.testing.assert_allclose(edges, [0, 0.25, 0.5, 0.75, 1])
-    assert observed
-    svg = output.read_text()
-    ET.parse(output)
-    assert "Count" in svg
-    if hue is None:
-        assert "All (n = 5)" in svg
-    else:
-        assert "a (n = 3)" in svg
-        assert "b (n = 2)" in svg
-        assert svg.index("a (n = 3)") < svg.index("b (n = 2)")
-
-
-def test_histogram_accepts_constant_scores_and_numeric_hue(tmp_path):
-    df = pl.DataFrame({"score": [0.5, 0.5], "label": [1, 0]})
-    output = tmp_path / "constant.svg"
-    plot_score_histogram(df, hue="label", output=output)
-    svg = output.read_text()
-    assert "0 (n = 1)" in svg
-    assert "1 (n = 1)" in svg
-
-
-@pytest.mark.parametrize(
-    "df",
-    [
-        pl.DataFrame({"score": [], "label": []}),
-        pl.DataFrame({"label": [0, 1]}),
-        pl.DataFrame({"score": [0.1, 0.9]}),
-        pl.DataFrame({"score": [0.1, None], "label": [0, 1]}),
-        pl.DataFrame({"score": [0.1, float("nan")], "label": [0, 1]}),
-        pl.DataFrame({"score": [0.1, float("inf")], "label": [0, 1]}),
-        pl.DataFrame({"score": ["low", "high"], "label": [0, 1]}),
-        pl.DataFrame({"score": [0.1, 0.9], "label": [0, None]}),
-        pl.DataFrame({"score": [0.1, 0.9], "label": [0.0, float("nan")]}),
-        pl.DataFrame({"score": [0.1, 0.9], "label": [[0], [1]]}),
-        pl.DataFrame({"score": range(21), "label": range(21)}),
-    ],
-)
-def test_invalid_histogram_input_does_not_create_output(tmp_path, df):
-    output = tmp_path / "artifacts" / "hist.png"
-    with pytest.raises(ValueError):
-        plot_score_histogram(df, hue="label", output=output)
-    assert not output.parent.exists()
-
-
-@pytest.mark.parametrize("plot", [plot_roc_curve, plot_score_histogram, plot_calibration_curve])
+@pytest.mark.parametrize("plot", [plot_roc_curve, plot_calibration_curve])
 def test_unsupported_format_does_not_overwrite_output(tmp_path, plot):
     output = tmp_path / "roc.txt"
     output.write_text("keep")

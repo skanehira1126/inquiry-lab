@@ -16,7 +16,7 @@ inquiry-labは、分析の進行を支援するCodexプラグインと、分析�
 Notebook Workbenchにも同等CLIを残せるが、inquiry-labは実行時に依存しない。
 `visualize` はPython APIとして、見た目を固定した分析用グラフの描画・保存を扱う。
 `visualize.ml.classifier.plot_roc_curve` は2値分類のROC曲線とAUCを保存する。
-同モジュールの `plot_score_histogram` はスコア分布を保存し、任意の `hue` 列で色分けする。
+`visualize.common.plot_histogram` は一般の数値列の分布を保存し、任意の `hue` 列で色分けする。
 `plot_calibration_curve` は確率の較正曲線と、同じビンのサンプル数を重ねて保存する。
 `skills/analyze/` が分析の進行・記録・最終レポートを扱う。
 `skills/eda/` は1shotの探索を担い、表形式・イベントと反復観測・予測準備の参照を組み合わせ、一括で観察・報告する。
@@ -26,6 +26,8 @@ Notebook Workbenchにも同等CLIを残せるが、inquiry-labは実行時に依
 設定の比較・選定、特徴量の選択・設計、モデルの誤差診断をそれぞれ扱う。
 各Skillの基本手順と終了条件は `SKILL.md`、詳細は `references/`、レポート雛形は `assets/` に置く。
 分析の入口はanalyzeに揃え、EDAを含む専門Skillの自動選択は無効にする。
+`skills/inquiry-lab-api/` は実装時の公開関数の選択・入力条件・呼び出し方を扱い、自動選択を有効にする。
+分析方法・終了判断は分析側に残し、APIの詳細と使用例はこのSkillの `references/` に集約する。
 プラグインmanifestとリポジトリ用marketplaceで、このSkillを提供する。
 段階別Skill、分析レポート自動生成、MCPサーバー、
 独自モデルループは未実装。
@@ -49,11 +51,13 @@ Notebook Workbenchにも同等CLIを残せるが、inquiry-labは実行時に依
   テストは `tests/test_json_inspection.py`。
 - `src/inquiry_lab/workspace.py`：テンプレート読込と展開。
   テンプレートは `importlib.resources` から読み、インストール先や実行時のcwdに依存させない。
-- `src/inquiry_lab/visualize/ml/classifier.py`：分類モデル向けの描画・保存。
+- `src/inquiry_lab/visualize/common.py`：MLに限らない汎用の描画・保存。
+  `plot_histogram` はPolars DataFrameと対象列 `column`、任意の色分け列 `hue` を受け取る。
+  対象列全体からNumPyの `auto` でビンを決め、群間で共有する。
+  縦軸は件数で、`hue` のカテゴリは最大20群。テストは `tests/test_visualize_common.py`。
+- `src/inquiry_lab/visualize/ml/classifier.py`：分類モデル向けのROC曲線・較正曲線の描画と保存。
   配色・レイアウトを固定し、Figure・Axesや任意の描画オプションを公開しない。
   Polars DataFrameと列名を受け取り、既定の列名は `label` と `score`。
-  ヒストグラムは全体のスコアからNumPyの `auto` でビンを決め、群間で共有する。
-  縦軸は件数で、`hue` のカテゴリは最大20群。
   較正曲線は0〜1の10等分で、左軸に陽性率、右軸に同じビンの件数を示す。
   空のビンは曲線を切り、陽性率0にしない。入力確率は0〜1で両クラスを必須とする。
   テストは `tests/test_classifier.py`。描画依存は `visualize` extraに分離する。

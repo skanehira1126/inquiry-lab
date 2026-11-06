@@ -3,6 +3,7 @@
 分析の進行を支援するCodexプラグインと、分析ワークスペースを作るPython CLIです。
 プラグインには、目的と判断基準を整理し、試行結果に応じて次の作業を選ぶ
 `analyze`、一括で観察する `eda`、探索を繰り返す `eda-loop`、`parameter-tuning`、`feature-design`、`error-analysis` を同梱しています。
+コードの実装には `inquiry-lab-api` が公開関数の選択・入力条件・呼び出し方を案内します。
 EDAは表形式・イベントと反復観測・予測準備の参照を組み合わせて使います。
 テンプレート集はモデルのパラメータチューニング、特徴量選択・エンジニアリング、誤差分析を提供しています。
 
@@ -42,6 +43,10 @@ inquiry-lab/
 │   ├── analyze/
 │   │   ├── SKILL.md
 │   │   └── agents/openai.yaml
+│   ├── inquiry-lab-api/
+│   │   ├── SKILL.md                # 実装時の公開関数の選択と利用条件
+│   │   ├── agents/openai.yaml
+│   │   └── references/            # 用途別のAPI契約と使用例
 │   ├── eda/
 │   │   ├── SKILL.md                # データと目的に応じて見方を組み合わせる
 │   │   ├── agents/openai.yaml
@@ -96,6 +101,10 @@ EDAで使う見方の追加は、`eda` の参照文書と選択条件を改訂�
 `eda`・`eda-loop` を含めて自動選択を無効にしています。
 analyzeの選択表から必要なSkillを読む構成で、利用者が個別に呼ぶ必要はありません。
 明示的なSkill指定は引き続き利用できます。
+
+Python APIの利用は [inquiry-lab-api](skills/inquiry-lab-api/SKILL.md) が担当し、コードの実装や
+利用できる関数の確認で自動選択されます。分析の目的・方法・終了条件は分析側のSkillが扱い、
+API Skillはその方法に使える関数と入力条件を確認します。各分析Skillからも実装時に参照します。
 
 成果物は、判断する人が読む分析レポートと、試行・根拠・次の判断を作業順に辿るhistoryです。
 historyは全テーマで共通とし、最終レポートは各Skillの雛形を使います。
@@ -321,7 +330,7 @@ uv run inquiry-lab history render --workspace analyses/missing
 依頼文書が存在しない場合は拒否します。既存の番号を避けて作成し、空ディレクトリやリンクも上書きしません。
 展開中の書込失敗では、`init` は作成途中のワークスペース、`run new` は今回作ったrunだけを除去します。
 
-## Pythonから分類モデルのグラフを保存する
+## Pythonからグラフを保存する
 
 可視化を使う分析環境へ、追加依存を含めてインストールします。CLIだけの利用では不要です。
 
@@ -331,64 +340,18 @@ uv pip install '.[visualize]'
 
 上記はリポジトリ直下で実行します。別の環境では `.` をこのリポジトリのパスに置き換えます。
 
-```python
-import polars as pl
+公開関数の選択と共通の保存仕様は [inquiry-lab-api](skills/inquiry-lab-api/SKILL.md) にまとめています。
+Polars DataFrameを受け取り、固定した見た目の図を保存します。入力条件と実行できる使用例は次の参照を使います。
 
-from inquiry_lab.visualize.ml.classifier import plot_roc_curve
+| 用途 | 関数 | APIの詳細・使用例 |
+|---|---|---|
+| 一般の数値列・分類スコアの分布 | `plot_histogram` | [ヒストグラム](skills/inquiry-lab-api/references/histogram.md) |
+| 2値分類のROC曲線・AUC | `plot_roc_curve` | [分類モデルのグラフ](skills/inquiry-lab-api/references/classifier.md) |
+| 予測確率の較正とビンごとの件数 | `plot_calibration_curve` | [分類モデルのグラフ](skills/inquiry-lab-api/references/classifier.md) |
 
-df = pl.DataFrame({"label": [0, 0, 1, 1], "score": [0.1, 0.4, 0.35, 0.8]})
-plot_roc_curve(df, output="runs/001/artifacts/roc.png")
-```
-
-2値分類のROC曲線、AUC、対角の基準線を描いて保存し、保存先の `Path` を返します。
-入力はPolars DataFrameで、既定の列名は正解が `label`、スコアが `score` です。
-別の列名なら `label="actual", score="prediction"` のように指定します。
-指定した2列だけを使い、入力DataFrameは変更しません。正解には両クラスが必要です。
-スコアは陽性クラスの確率または決定スコアを渡し、大きいほど陽性とします。
-`predict_proba` の結果は陽性クラスの値をスコア列に入れてください。
-陽性ラベルは既定で `1`、別のラベルなら `pos_label="yes"` などで指定します。
-欠損・非有限スコア・単一クラス・多クラスの入力はエラーにし、暗黙の除外や補完は行いません。
-
-配色・サイズ・軸・凡例は固定し、呼出元のmatplotlib設定に依存させません。
-保存先の拡張子は `.png`（900×900 px）、`.svg`、`.pdf` に対応します。
-親ディレクトリは自動作成し、同じ保存先のファイルは上書きします。
-描画用のFigureやAxes、見た目を変更する引数は公開しません。
-実装は `src/inquiry_lab/visualize/ml/classifier.py` にあります。
-
-スコア分布には `plot_score_histogram` を使います。
-
-```python
-from inquiry_lab.visualize.ml.classifier import plot_score_histogram
-
-plot_score_histogram(df, output="runs/001/artifacts/scores.png")
-plot_score_histogram(df, hue="label", output="runs/001/artifacts/scores-by-label.png")
-```
-
-スコア列は既定で `score`、変更するときは `score="prediction"` のように指定します。
-`hue` を省略すると全体、列名を指定すると値ごとに色分けしたヒストグラムを重ねて描きます。
-全体のスコアからNumPyの `auto`（スタージェス則とFreedman–Diaconis則）で
-等幅のビンを自動決定し、すべての群で境界を共有します。
-縦軸は件数で、積み上げや正規化は行いません。凡例には群別の件数を添えます。
-`hue` は数値でもカテゴリとして扱い、値順で配色します。判別できる配色を保つため最大20群です。
-指定列のnull・NaN・非有限値を拒否し、指定していない列の欠損は無視します。
-保存形式・サイズ・親ディレクトリの作成と上書きはROC曲線と共通です。
-
-予測確率と実際の陽性率の対応には `plot_calibration_curve` を使います。
-
-```python
-from inquiry_lab.visualize.ml.classifier import plot_calibration_curve
-
-plot_calibration_curve(df, output="runs/001/artifacts/calibration.png")
-```
-
-`label`・`score`・`pos_label` の指定方法はROC曲線と共通で、正解には両クラスが必要です。
-スコアには0〜1の予測確率を渡します。範囲外の決定スコアはエラーにします。
-0〜1を10等分し、各ビンの平均予測確率と実際の陽性率を線と点で表示します。
-同じビンのサンプル数を背景の棒と件数ラベルで重ね、右軸に件数を表示します。
-対角線は予測確率と陽性率が一致する基準です。
-ビン境界上の値は左側のビンに含め、0は最初、1は最後のビンに含めます。
-空のビンには点を描かず、線もそこで切ります。陽性率0とは扱いません。
-欠損・非有限値の扱いと保存方法はROC曲線と共通です。
+0.2.0では、分類専用だった `visualize.ml.classifier.plot_score_histogram` を
+`visualize.common.plot_histogram` に置き換えています。呼出元はimport先を変更し、
+対象列を `column="score"` のように指定してください。
 
 ## 開発
 
