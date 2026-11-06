@@ -1,6 +1,6 @@
 {
   "name": "inquiry-lab",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "目的と判断基準を整理し、試行結果に応じて分析を進めるスキルを提供します。",
   "author": {
     "name": "inquiry-lab contributors"

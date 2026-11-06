@@ -3,7 +3,7 @@ revision = 3
 requires-python = ">=3.12"
 
 [options]
-exclude-newer = "2026-10-30T08:02:21.288828Z"
+exclude-newer = "2026-10-30T15:46:11.903013Z"
 exclude-newer-span = "P1W"
 
 [[package]]
@@ -209,7 +209,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "matplotlib", marker = "extra == 'visualize'", specifier = ">=3.8" },
+    { name = "matplotlib", marker = "extra == 'visualize'", specifier = ">=3.10" },
     { name = "numpy", marker = "extra == 'visualize'", specifier = ">=1.26" },
     { name = "polars", marker = "extra == 'visualize'", specifier = ">=1" },
     { name = "pyarrow", specifier = ">=19" },

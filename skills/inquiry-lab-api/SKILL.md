@@ -14,7 +14,8 @@ description: "inquiry-labのPython APIを使うコードの実装・修正や、
 
 | 行いたい処理 | 公開関数 | 実装時に読む参照 |
 |---|---|---|
-| 数値列の分布、カテゴリ別の分布を描く | `visualize.common.plot_histogram` | [ヒストグラム](references/histogram.md) |
+| 数値列の分布をヒストグラムと箱ひげ図で描く | `visualize.common.plot_histogram` | [ヒストグラム](references/histogram.md) |
+| 2つの数値列の関係を散布図で描く | `visualize.common.plot_scatter` | [散布図](references/scatter.md) |
 | 2値分類の識別性能をROC・AUCで示す | `visualize.ml.classifier.plot_roc_curve` | [分類モデルのグラフ](references/classifier.md) |
 | 予測確率と実際の陽性率の対応を示す | `visualize.ml.classifier.plot_calibration_curve` | [分類モデルのグラフ](references/classifier.md) |
 

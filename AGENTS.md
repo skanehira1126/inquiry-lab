@@ -7,16 +7,18 @@
 inquiry-labは、分析の進行を支援するCodexプラグインと、分析の問い・試行結果・統合レポートを
 記録するワークスペースのテンプレートを展開するPython CLI。
 分析にはPython、SQL、Notebookなど任意の実行手段を使える。
-コマンドは `inquiry-lab init`、`inquiry-lab run new`、`inquiry-lab history record`、`inquiry-lab history render`、`inquiry-lab data inspect`、`inquiry-lab data values`、`inquiry-lab json inspect`。
+コマンドは `inquiry-lab init`、`inquiry-lab run new`、`inquiry-lab history record`、`inquiry-lab history render`、`inquiry-lab data inspect`、`inquiry-lab data values`、`inquiry-lab json inspect`、`inquiry-lab state update / show / context`。
 利用方法と生成物の構成は [README.md](README.md) を参照する。
 
-現行CLIはテンプレート展開、runの自動採番、試行・判断のJSON記録、作業履歴のMarkdown出力を扱う。分析の実行、結果の採用、完了状態、履歴sequenceの自動採番は管理しない。
+現行CLIはテンプレート展開、runの自動採番、試行・判断のJSON記録、作業履歴のMarkdown出力、全体stateの保存・復元を扱う。分析の実行、結果の採用・完了の判定、履歴sequenceの自動採番は管理しない。
 `data` はCSV・TSV・Parquetの読み取り専用の基本確認を扱い、EDAの観測範囲・欠損定義・省略の契約を揃える。
 `json inspect` はJSONの指定階層の直下を表示する。`--key` はドット区切りと繰り返し指定に対応し、ネストした値は型と件数だけを示す。
 Notebook Workbenchにも同等CLIを残せるが、inquiry-labは実行時に依存しない。
 `visualize` はPython APIとして、見た目を固定した分析用グラフの描画・保存を扱う。
 `visualize.ml.classifier.plot_roc_curve` は2値分類のROC曲線とAUCを保存する。
 `visualize.common.plot_histogram` は一般の数値列の分布を保存し、任意の `hue` 列で色分けする。
+横軸と配色を共有した群別の箱ひげ図を上部に添える。
+`visualize.common.plot_scatter` は2つの数値列の関係を散布図で保存し、任意の `hue` 列で色分けする。
 `plot_calibration_curve` は確率の較正曲線と、同じビンのサンプル数を重ねて保存する。
 `skills/analyze/` が分析の進行・記録・最終レポートを扱う。
 `skills/eda/` は1shotの探索を担い、表形式・イベントと反復観測・予測準備の参照を組み合わせ、一括で観察・報告する。
@@ -49,12 +51,21 @@ Notebook Workbenchにも同等CLIを残せるが、inquiry-labは実行時に依
 - `src/inquiry_lab/json_inspection.py`：JSONの読み取り専用の階層参照と表示。
   キー名にドットを含むJSONと重複キーを拒否する。全体を読み込み、表示項目数と長い値を制限して省略を明示する。
   テストは `tests/test_json_inspection.py`。
+- `src/inquiry_lab/json_parsing.py`：inspectionとstateが共有する重複・ドット付きキーの拒否。
+- `src/inquiry_lab/state.py`：全体の目標・終了条件と現在の個別作業を`state.json`へ保存する。
+  全体置換前にschemaを検査し、UTCの更新日時を付け、同一ディレクトリ内から置き換える。
+  showは状態全体を省略せず表示する。contextは明示したworkspaceからSessionStart用JSONを返す。
+  更新者はanalyzeの一人とし、子はrunを返す。状態遷移や完了の自動判定はしない。
+  `skills/analyze/references/state.md`が項目・更新・復元・任意hook設定の正本。テストは`tests/test_state.py`。
 - `src/inquiry_lab/workspace.py`：テンプレート読込と展開。
   テンプレートは `importlib.resources` から読み、インストール先や実行時のcwdに依存させない。
 - `src/inquiry_lab/visualize/common.py`：MLに限らない汎用の描画・保存。
   `plot_histogram` はPolars DataFrameと対象列 `column`、任意の色分け列 `hue` を受け取る。
   対象列全体からNumPyの `auto` でビンを決め、群間で共有する。
   縦軸は件数で、`hue` のカテゴリは最大20群。テストは `tests/test_visualize_common.py`。
+  上部の箱ひげ図は中央値・四分位範囲・1.5 IQRのひげと外側の点を示す。
+  `plot_scatter` は数値列 `x`・`y` と任意の `hue` を受け取り、同じ行の値を1点として全行を描画する。
+  両関数とも指定列の欠損・非有限値を拒否し、群の値順に配色して件数を添える。
 - `src/inquiry_lab/visualize/ml/classifier.py`：分類モデル向けのROC曲線・較正曲線の描画と保存。
   配色・レイアウトを固定し、Figure・Axesや任意の描画オプションを公開しない。
   Polars DataFrameと列名を受け取り、既定の列名は `label` と `score`。
@@ -100,6 +111,7 @@ Notebook Workbenchにも同等CLIを残せるが、inquiry-labは実行時に依
   `req-001` と `run-001` は文書を対応させるラベルであり、分析状態ではない。runの番号と履歴sequenceは別物として扱う。
   `init` と `run new` の `--template eda` はEDA用のresult.mdを展開する。依頼文書とoutput.mdは共通雛形を使う。
 - Notebook、実行スクリプト、`analysis.yaml`、`run.yaml` は生成しない。
+  `state.json`は初回の`state update`で作り、init/run newの生成物は増やさない。
   未実装の検証markerや採用・完了状態を、テンプレートだけで利用者に要求しない。
 - テンプレート変更では、問いから結果・根拠・統合レポートへの参照を保つ。
   入力の版、手順、パラメータ、環境、保存した出力を記録できることを確認する。
