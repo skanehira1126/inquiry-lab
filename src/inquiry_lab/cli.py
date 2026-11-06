@@ -6,6 +6,7 @@ from pathlib import Path
 from inquiry_lab import __version__
 from inquiry_lab.data import DataArgumentError, inspect_data, list_data_values, render_data_text
 from inquiry_lab.history import record_entry, render_history
+from inquiry_lab.json_inspection import JsonArgumentError, inspect_json
 from inquiry_lab.workspace import create_run, initialize_workspace
 
 
@@ -28,6 +29,10 @@ def cli_history_record(workspace: Path, input_file: Path | None) -> None:
 
 def cli_history_render(workspace: Path) -> None:
     print(render_history(workspace))
+
+
+def cli_json_inspect(path: Path, keys: list[str], head: int) -> None:
+    print(inspect_json(path, keys=keys, head=head), end="")
 
 
 def cli_data_inspect(
@@ -60,6 +65,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     commands = parser.add_subparsers(required=True)
+    json_command = commands.add_parser("json", help="inspect JSON files (read-only)")
+    json_actions = json_command.add_subparsers(required=True)
+    json_inspect = json_actions.add_parser("inspect", help="show values at one JSON level")
+    json_inspect.add_argument("path", type=Path)
+    json_inspect.add_argument(
+        "--key",
+        dest="keys",
+        action="append",
+        default=[],
+        help="child key or dotted path (repeatable); arrays use zero-based indices",
+    )
+    json_inspect.add_argument("--head", type=int, default=20, help="maximum displayed entries")
+    json_inspect.set_defaults(func=cli_json_inspect)
     data = commands.add_parser("data", help="inspect CSV, TSV, or Parquet files (read-only)")
     data_actions = data.add_subparsers(required=True)
     inspect = data_actions.add_parser("inspect", help="show schema, row count, and preview")
@@ -117,7 +135,7 @@ def main(argv: list[str] | None = None) -> int:
     func = args.pop("func")
     try:
         func(**args)
-    except DataArgumentError as error:
+    except (DataArgumentError, JsonArgumentError) as error:
         parser.error(str(error))
     except (OSError, ValueError) as error:
         print(f"inquiry-lab: {error}", file=sys.stderr)

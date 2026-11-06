@@ -10,6 +10,9 @@ description: "分析の入口。目的と判断基準を整理し、EDA、モデ
 下の選択表から専門Skillを選び、方法・データ利用範囲・終了条件・レポート雛形を進行に取り入れる。
 分析用Skillの自動選択はこのanalyzeだけにし、専門Skillはここから必要なものを読む。
 Python、SQL、Notebookなど、案件の既存環境に合う実行手段を選ぶ。
+設定や結果のJSONを閲覧する際は、`inquiry-lab json inspect <ファイル>` を使う。
+ネストは展開されないため、必要な階層を `--key model.params` または `--key model --key params` で指定する。
+キー名にドットを含むJSONは未対応。表示の省略や読込範囲は[CLIの説明](../../README.md#jsonの基本確認)を確認する。
 
 ## 1. 分析目的を受け取る
 

@@ -7,11 +7,12 @@
 inquiry-labは、分析の進行を支援するCodexプラグインと、分析の問い・試行結果・統合レポートを
 記録するワークスペースのテンプレートを展開するPython CLI。
 分析にはPython、SQL、Notebookなど任意の実行手段を使える。
-コマンドは `inquiry-lab init`、`inquiry-lab run new`、`inquiry-lab history record`、`inquiry-lab history render`、`inquiry-lab data inspect`、`inquiry-lab data values`。
+コマンドは `inquiry-lab init`、`inquiry-lab run new`、`inquiry-lab history record`、`inquiry-lab history render`、`inquiry-lab data inspect`、`inquiry-lab data values`、`inquiry-lab json inspect`。
 利用方法と生成物の構成は [README.md](README.md) を参照する。
 
 現行CLIはテンプレート展開、runの自動採番、試行・判断のJSON記録、作業履歴のMarkdown出力を扱う。分析の実行、結果の採用、完了状態、履歴sequenceの自動採番は管理しない。
 `data` はCSV・TSV・Parquetの読み取り専用の基本確認を扱い、EDAの観測範囲・欠損定義・省略の契約を揃える。
+`json inspect` はJSONの指定階層の直下を表示する。`--key` はドット区切りと繰り返し指定に対応し、ネストした値は型と件数だけを示す。
 Notebook Workbenchにも同等CLIを残せるが、inquiry-labは実行時に依存しない。
 `visualize` はPython APIとして、見た目を固定した分析用グラフの描画・保存を扱う。
 `visualize.ml.classifier.plot_roc_curve` は2値分類のROC曲線とAUCを保存する。
@@ -43,6 +44,9 @@ Notebook Workbenchにも同等CLIを残せるが、inquiry-labは実行時に依
 - `src/inquiry_lab/data.py`：単一ファイルの基本確認と値の全件集計。PyArrowでParquetを読み、CSV/TSVの文字列を保持する。
   `skills/eda/references/data-inspection.md` に結果の読み方と範囲を集約する。
   表示上限と走査範囲を区別し、未集計の欠損をゼロと扱わない。テストは `tests/test_data.py`。
+- `src/inquiry_lab/json_inspection.py`：JSONの読み取り専用の階層参照と表示。
+  キー名にドットを含むJSONと重複キーを拒否する。全体を読み込み、表示項目数と長い値を制限して省略を明示する。
+  テストは `tests/test_json_inspection.py`。
 - `src/inquiry_lab/workspace.py`：テンプレート読込と展開。
   テンプレートは `importlib.resources` から読み、インストール先や実行時のcwdに依存させない。
 - `src/inquiry_lab/visualize/ml/classifier.py`：分類モデル向けの描画・保存。
