@@ -7,12 +7,17 @@
 inquiry-labは、分析の進行を支援するCodexプラグインと、分析の問い・試行結果・統合レポートを
 記録するワークスペースのテンプレートを展開するPython CLI。
 分析にはPython、SQL、Notebookなど任意の実行手段を使える。
-コマンドは `inquiry-lab init`、`inquiry-lab run new`、`inquiry-lab history record`、`inquiry-lab history render`、`inquiry-lab data inspect`、`inquiry-lab data values`。
+コマンドは `inquiry-lab init`、`inquiry-lab run new`、`inquiry-lab history record`、`inquiry-lab history render`、`inquiry-lab data inspect`、`inquiry-lab data values`、`inquiry-lab json inspect`。
 利用方法と生成物の構成は [README.md](README.md) を参照する。
 
 現行CLIはテンプレート展開、runの自動採番、試行・判断のJSON記録、作業履歴のMarkdown出力を扱う。分析の実行、結果の採用、完了状態、履歴sequenceの自動採番は管理しない。
 `data` はCSV・TSV・Parquetの読み取り専用の基本確認を扱い、EDAの観測範囲・欠損定義・省略の契約を揃える。
+`json inspect` はJSONの指定階層の直下を表示する。`--key` はドット区切りと繰り返し指定に対応し、ネストした値は型と件数だけを示す。
 Notebook Workbenchにも同等CLIを残せるが、inquiry-labは実行時に依存しない。
+`visualize` はPython APIとして、見た目を固定した分析用グラフの描画・保存を扱う。
+`visualize.ml.classifier.plot_roc_curve` は2値分類のROC曲線とAUCを保存する。
+`visualize.common.plot_histogram` は一般の数値列の分布を保存し、任意の `hue` 列で色分けする。
+`plot_calibration_curve` は確率の較正曲線と、同じビンのサンプル数を重ねて保存する。
 `skills/analyze/` が分析の進行・記録・最終レポートを扱う。
 `skills/eda/` は1shotの探索を担い、表形式・イベントと反復観測・予測準備の参照を組み合わせ、一括で観察・報告する。
 `skills/eda-loop/` は各回のEDAを独立したサブエージェントへ委任し、親が次の依頼・方向転換・停止を判断する。
@@ -21,6 +26,8 @@ Notebook Workbenchにも同等CLIを残せるが、inquiry-labは実行時に依
 設定の比較・選定、特徴量の選択・設計、モデルの誤差診断をそれぞれ扱う。
 各Skillの基本手順と終了条件は `SKILL.md`、詳細は `references/`、レポート雛形は `assets/` に置く。
 分析の入口はanalyzeに揃え、EDAを含む専門Skillの自動選択は無効にする。
+`skills/inquiry-lab-api/` は実装時の公開関数の選択・入力条件・呼び出し方を扱い、自動選択を有効にする。
+分析方法・終了判断は分析側に残し、APIの詳細と使用例はこのSkillの `references/` に集約する。
 プラグインmanifestとリポジトリ用marketplaceで、このSkillを提供する。
 段階別Skill、分析レポート自動生成、MCPサーバー、
 独自モデルループは未実装。
@@ -39,8 +46,21 @@ Notebook Workbenchにも同等CLIを残せるが、inquiry-labは実行時に依
 - `src/inquiry_lab/data.py`：単一ファイルの基本確認と値の全件集計。PyArrowでParquetを読み、CSV/TSVの文字列を保持する。
   `skills/eda/references/data-inspection.md` に結果の読み方と範囲を集約する。
   表示上限と走査範囲を区別し、未集計の欠損をゼロと扱わない。テストは `tests/test_data.py`。
+- `src/inquiry_lab/json_inspection.py`：JSONの読み取り専用の階層参照と表示。
+  キー名にドットを含むJSONと重複キーを拒否する。全体を読み込み、表示項目数と長い値を制限して省略を明示する。
+  テストは `tests/test_json_inspection.py`。
 - `src/inquiry_lab/workspace.py`：テンプレート読込と展開。
   テンプレートは `importlib.resources` から読み、インストール先や実行時のcwdに依存させない。
+- `src/inquiry_lab/visualize/common.py`：MLに限らない汎用の描画・保存。
+  `plot_histogram` はPolars DataFrameと対象列 `column`、任意の色分け列 `hue` を受け取る。
+  対象列全体からNumPyの `auto` でビンを決め、群間で共有する。
+  縦軸は件数で、`hue` のカテゴリは最大20群。テストは `tests/test_visualize_common.py`。
+- `src/inquiry_lab/visualize/ml/classifier.py`：分類モデル向けのROC曲線・較正曲線の描画と保存。
+  配色・レイアウトを固定し、Figure・Axesや任意の描画オプションを公開しない。
+  Polars DataFrameと列名を受け取り、既定の列名は `label` と `score`。
+  較正曲線は0〜1の10等分で、左軸に陽性率、右軸に同じビンの件数を示す。
+  空のビンは曲線を切り、陽性率0にしない。入力確率は0〜1で両クラスを必須とする。
+  テストは `tests/test_classifier.py`。描画依存は `visualize` extraに分離する。
 - `src/inquiry_lab/templates/`：依頼、試行結果、統合レポートのMarkdownテンプレート。
   汎用雛形は英語、EDA用run雛形は日本語で、利用者が記入する言語は自由。
   EDAの正本は `skills/eda/assets/result.md` とし、変更時は同じ内容を `templates/eda-result.md` へコピーして一致を検証する。
@@ -61,7 +81,8 @@ Notebook Workbenchにも同等CLIを残せるが、inquiry-labは実行時に依
 - `skills/error-analysis/SKILL.md`：計画した範囲の誤差を一括診断し、報告して終了する手順。
   各Skillはanalyzeの共通記録を使い、テーマ追加では独立したSkill・雛形とanalyzeの選択表を更新する。
 - `pyproject.toml`：Python 3.12以降、Flitによる配布、pytestとRuffによる検証を定義する。
-  実行時の外部Python依存はParquet対応のPyArrow。依存を追加する場合は必要性と配布への影響を確認する。
+  基本の実行時依存はParquet対応のPyArrow。可視化用extraはmatplotlib・NumPy・Polars・scikit-learn。
+  開発環境ではextraも導入する。依存を追加する場合は必要性と配布への影響を確認する。
 
 ## 変更時に守る契約
 

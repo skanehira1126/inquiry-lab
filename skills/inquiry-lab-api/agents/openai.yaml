@@ -1,0 +1,3 @@
+interface:
+  display_name: "inquiry-lab API"
+  short_description: "分析コードに使う公開関数を選び、入力条件・呼び出し方・保存方法を確認する"

@@ -11,11 +11,14 @@ requires-python = ">=3.12"
 license = { file = "LICENSE" }
 dependencies = ["pyarrow>=19"]
 
+[project.optional-dependencies]
+visualize = ["matplotlib>=3.8", "numpy>=1.26", "polars>=1", "scikit-learn>=1.4"]
+
 [project.scripts]
 inquiry-lab = "inquiry_lab.cli:main"
 
 [dependency-groups]
-dev = ["pytest>=8,<10", "ruff>=0.9,<1"]
+dev = ["pytest>=8,<10", "ruff>=0.9,<1", "inquiry-lab[visualize]"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

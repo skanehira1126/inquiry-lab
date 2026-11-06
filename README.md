@@ -3,12 +3,15 @@
 分析の進行を支援するCodexプラグインと、分析ワークスペースを作るPython CLIです。
 プラグインには、目的と判断基準を整理し、試行結果に応じて次の作業を選ぶ
 `analyze`、一括で観察する `eda`、探索を繰り返す `eda-loop`、`parameter-tuning`、`feature-design`、`error-analysis` を同梱しています。
+コードの実装には `inquiry-lab-api` が公開関数の選択・入力条件・呼び出し方を案内します。
 EDAは表形式・イベントと反復観測・予測準備の参照を組み合わせて使います。
 テンプレート集はモデルのパラメータチューニング、特徴量選択・エンジニアリング、誤差分析を提供しています。
 
 CLIは `init` で分析先と最初のrun、`run new` で追加runのテンプレートを展開し、
 `history` で作業履歴の記録とMarkdown出力を行います。
 `data inspect / values` はCSV・TSV・Parquetの基本確認を行い、EDAで読む範囲・欠損・表示の省略を揃えます。
+`json inspect` はJSONの指定階層の直下を表示し、設定や分析結果を確認します。
+Python APIの `visualize` は、固定した見た目で分析用の図を描画・保存します。
 Pythonスクリプト、SQL、Notebookなど任意の方法で分析し、問いと根拠、現在の結論を
 Markdownでつなげて残せます。CLIは分析の実行、結果の検証・採用、完了状態を
 管理しません。段階別Skill、分析レポートの自動生成、MCPサーバー、
@@ -40,6 +43,10 @@ inquiry-lab/
 │   ├── analyze/
 │   │   ├── SKILL.md
 │   │   └── agents/openai.yaml
+│   ├── inquiry-lab-api/
+│   │   ├── SKILL.md                # 実装時の公開関数の選択と利用条件
+│   │   ├── agents/openai.yaml
+│   │   └── references/            # 用途別のAPI契約と使用例
 │   ├── eda/
 │   │   ├── SKILL.md                # データと目的に応じて見方を組み合わせる
 │   │   ├── agents/openai.yaml
@@ -69,7 +76,7 @@ inquiry-lab/
 │       ├── agents/openai.yaml
 │       ├── references/diagnostics.md
 │       └── assets/report.md
-├── src/inquiry_lab/                # Python CLIと文章テンプレート
+├── src/inquiry_lab/                # Python CLI・可視化API・文章テンプレート
 ├── tests/
 └── pyproject.toml
 ```
@@ -94,6 +101,10 @@ EDAで使う見方の追加は、`eda` の参照文書と選択条件を改訂�
 `eda`・`eda-loop` を含めて自動選択を無効にしています。
 analyzeの選択表から必要なSkillを読む構成で、利用者が個別に呼ぶ必要はありません。
 明示的なSkill指定は引き続き利用できます。
+
+Python APIの利用は [inquiry-lab-api](skills/inquiry-lab-api/SKILL.md) が担当し、コードの実装や
+利用できる関数の確認で自動選択されます。分析の目的・方法・終了条件は分析側のSkillが扱い、
+API Skillはその方法に使える関数と入力条件を確認します。各分析Skillからも実装時に参照します。
 
 成果物は、判断する人が読む分析レポートと、試行・根拠・次の判断を作業順に辿るhistoryです。
 historyは全テーマで共通とし、最終レポートは各Skillの雛形を使います。
@@ -202,6 +213,30 @@ CSV/TSVはヘッダー付きUTF-8（BOM可）が対象です。ディレクト�
 標準エラーへ報告します。`--json` は成功時の結果形式を選び、エラーは既存CLIと同じテキスト形式です。
 入力ファイルは変更せず、runや履歴は自動作成しません。EDAの中で使う場合は結果と実行条件を該当runに残します。
 
+## JSONの基本確認
+
+設定や分析結果のJSONを確認するときは、`json inspect` で指定階層の直下を表示します。
+
+```bash
+inquiry-lab json inspect config.json
+inquiry-lab json inspect config.json --key model.params
+inquiry-lab json inspect config.json --key model --key params
+inquiry-lab json inspect results.json --key trials.0.metrics
+```
+
+単純な値はそのまま表示し、直下のオブジェクト・配列は展開せず型と要素数を示します。
+`--key` はドット区切りと繰り返し指定を組み合わせられます。配列では0始まりの添字を使います。
+キー名そのものに `.` が含まれるJSONは、参照先以外の階層も含めエラーにします。
+重複キーも拒否し、どちらの値を読んだかが曖昧な状態を避けます。
+
+オブジェクト・配列は入力順で先頭20項目を表示し、`--head` で表示数を変更できます。
+長いキー・値はJSON表現の先頭160文字まで表示し、省略を明示します。
+スカラーを参照した場合はその値だけを表示します。出力は閲覧用のテキストです。
+入力は単一のローカルUTF-8 JSONファイル（BOM可）で、拡張子によらずJSONとして読みます。
+JSONLは対象外です。ファイル全体をメモリへ読み込むため、表示上限やキー指定は読込量を制限しません。
+入力を変更せず、runや履歴も自動作成しません。
+不正なJSON・I/Oエラーは終了コード1、存在しないキーや不正なオプションは2で標準エラーへ報告します。
+
 ## 生成されるワークスペース
 
 ```text
@@ -294,6 +329,29 @@ uv run inquiry-lab history render --workspace analyses/missing
 `run new` は既存の分析先の `runs/` に新しいrunだけを作成します。`runs/` がない場合やシンボリックリンクの場合、
 依頼文書が存在しない場合は拒否します。既存の番号を避けて作成し、空ディレクトリやリンクも上書きしません。
 展開中の書込失敗では、`init` は作成途中のワークスペース、`run new` は今回作ったrunだけを除去します。
+
+## Pythonからグラフを保存する
+
+可視化を使う分析環境へ、追加依存を含めてインストールします。CLIだけの利用では不要です。
+
+```bash
+uv pip install '.[visualize]'
+```
+
+上記はリポジトリ直下で実行します。別の環境では `.` をこのリポジトリのパスに置き換えます。
+
+公開関数の選択と共通の保存仕様は [inquiry-lab-api](skills/inquiry-lab-api/SKILL.md) にまとめています。
+Polars DataFrameを受け取り、固定した見た目の図を保存します。入力条件と実行できる使用例は次の参照を使います。
+
+| 用途 | 関数 | APIの詳細・使用例 |
+|---|---|---|
+| 一般の数値列・分類スコアの分布 | `plot_histogram` | [ヒストグラム](skills/inquiry-lab-api/references/histogram.md) |
+| 2値分類のROC曲線・AUC | `plot_roc_curve` | [分類モデルのグラフ](skills/inquiry-lab-api/references/classifier.md) |
+| 予測確率の較正とビンごとの件数 | `plot_calibration_curve` | [分類モデルのグラフ](skills/inquiry-lab-api/references/classifier.md) |
+
+0.2.0では、分類専用だった `visualize.ml.classifier.plot_score_histogram` を
+`visualize.common.plot_histogram` に置き換えています。呼出元はimport先を変更し、
+対象列を `column="score"` のように指定してください。
 
 ## 開発
 
