@@ -348,6 +348,23 @@ plot_score_histogram(df, hue="label", output="runs/001/artifacts/scores-by-label
 指定列のnull・NaN・非有限値を拒否し、指定していない列の欠損は無視します。
 保存形式・サイズ・親ディレクトリの作成と上書きはROC曲線と共通です。
 
+予測確率と実際の陽性率の対応には `plot_calibration_curve` を使います。
+
+```python
+from inquiry_lab.visualize.ml.classifier import plot_calibration_curve
+
+plot_calibration_curve(df, output="runs/001/artifacts/calibration.png")
+```
+
+`label`・`score`・`pos_label` の指定方法はROC曲線と共通で、正解には両クラスが必要です。
+スコアには0〜1の予測確率を渡します。範囲外の決定スコアはエラーにします。
+0〜1を10等分し、各ビンの平均予測確率と実際の陽性率を線と点で表示します。
+同じビンのサンプル数を背景の棒と件数ラベルで重ね、右軸に件数を表示します。
+対角線は予測確率と陽性率が一致する基準です。
+ビン境界上の値は左側のビンに含め、0は最初、1は最後のビンに含めます。
+空のビンには点を描かず、線もそこで切ります。陽性率0とは扱いません。
+欠損・非有限値の扱いと保存方法はROC曲線と共通です。
+
 ## 開発
 
 このリポジトリで「モデル評価用の分析テンプレートを作りたい」などと依頼すると、開発用の
