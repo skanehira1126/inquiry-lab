@@ -385,6 +385,7 @@ Polars DataFrameを受け取り、固定した見た目の図を保存します�
 [create-analysis-template](.agents/skills/create-analysis-template/SKILL.md) が自動選択の対象になります。
 目的、入力、比較手順、終了条件を `skills/<テーマ名>/SKILL.md` にまとめ、
 出力レポートの雛形を `assets/report.md`、必要な詳細を `references/` に置きます。
+雛形は見出しと最低限の項目に絞り、執筆指示はSkillの出力節や参照文書へまとめます。
 各Skillの自動選択を無効にし、analyzeの選択表へ登録します。
 繰り返し使う計算があれば、そのSkillの `scripts/` に同梱します。
 
@@ -398,6 +399,8 @@ uv build
 
 CLIは `src/inquiry_lab/cli.py`、展開処理は `src/inquiry_lab/workspace.py` にあります。
 文章テンプレートは `src/inquiry_lab/templates/` に置き、配布パッケージに同梱しています。
+汎用の結果・統合レポートの記入内容は[成果物の共通方針](skills/analyze/references/deliverables.md)、
+テーマ別の記入内容は各Skillの出力手順を参照します。
 EDA用run雛形の正本は `skills/eda/assets/result.md` です。変更時は同じ内容を
 `src/inquiry_lab/templates/eda-result.md` へコピーします。テストで両者の一致を検査します。
 開発方針、変更時に守る契約、配布物の確認方法は [AGENTS.md](AGENTS.md) を参照してください。

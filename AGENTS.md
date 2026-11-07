@@ -27,6 +27,7 @@ Notebook Workbenchにも同等CLIを残せるが、inquiry-labは実行時に依
 `skills/parameter-tuning/`、`skills/feature-design/`、`skills/error-analysis/` は、
 設定の比較・選定、特徴量の選択・設計、モデルの誤差診断をそれぞれ扱う。
 各Skillの基本手順と終了条件は `SKILL.md`、詳細は `references/`、レポート雛形は `assets/` に置く。
+レポート雛形は見出しと最低限の項目に絞り、執筆指示はSkillの出力節または参照文書を正本とする。
 分析の入口はanalyzeに揃え、EDAを含む専門Skillの自動選択は無効にする。
 `skills/inquiry-lab-api/` は実装時の公開関数の選択・入力条件・呼び出し方を扱い、自動選択を有効にする。
 分析方法・終了判断は分析側に残し、APIの詳細と使用例はこのSkillの `references/` に集約する。
