@@ -18,7 +18,7 @@
     "progress": "未着手。学習・評価は実行していない。"
   },
   "next_action": "依頼文書と既存コードを確認し、未決の評価条件を整理する。",
-  "constraints": ["最終ホールドアウトは探索に使わない。"],
+  "constraints": ["開発側の裏付けとAVの所見を整理し、共通のデータ利用方針の進行条件を満たしてからtestを評価する。"],
   "blockers": [],
   "history_sequence": 0,
   "references": [

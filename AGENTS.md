@@ -90,7 +90,8 @@ CLIによる学習・探索の自動実行は未実装。
   案件別の定量指標や未実装の段階別Skill・CLIを前提にしない。
 - `skills/modeling/SKILL.md`：学習・評価と性格把握から、広い仮説探索・深掘り・見立ての更新を繰り返す。
   初期構成・設定探索、仮説生成、行動選択、時間内での終了判断の正本。
-  モデル関連Skillに共通するデータ利用方針もここに置き、専門Skillは参照する。
+  `references/data-usage.md`をモデル関連Skillのデータ利用方針の正本とする。
+  train・valid・pretest・testの役割、柔軟な分割、AVと開発側の裏付けによるtest評価・再評価を扱う。
   共通の履歴・stateを使い、`references/state.md`でモデルの参照と委任・再開を定める。
   `assets/report.md`で改善結果と現在地を報告する。
 - `skills/models-understanding/SKILL.md`：モデルの構成・性能・入力依存・変更への反応をつなげる。
@@ -109,6 +110,7 @@ CLIによる学習・探索の自動実行は未実装。
 - `skills/feature-design/SKILL.md`：経験的な仮説や診断から特徴量の削減・追加・変換を考え、再学習で比較する手順と終了条件。
   仮説を特徴量へ具体化する方法、候補集合の共同評価と表現の採用基準の正本。
 - `skills/error-analysis/SKILL.md`：計画した範囲の誤差を一括診断し、報告して終了する手順。
+  `references/diagnostics.md`で変更前後の誤りを比較し、弱点の改善と新たな苦手領域・悪化を確認する。
   各Skillはanalyzeの共通記録を使い、委任時はrunを返す。共有履歴・state・統合レポートは全体進行担当が更新する。
   テーマ追加では独立したSkill・雛形と、担当する入口の参照を更新する。
 - `pyproject.toml`：Python 3.12以降、Flitによる配布、pytestとRuffによる検証を定義する。

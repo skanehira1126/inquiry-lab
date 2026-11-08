@@ -48,6 +48,7 @@ inquiry-lab/
 │   │   ├── SKILL.md                # 学習・評価、広い仮説探索と深掘りによる改善
 │   │   ├── agents/openai.yaml
 │   │   ├── references/state.md    # 共通stateの利用、再開と一件ずつの委任
+│   │   ├── references/data-usage.md # データ区分、testへの進行条件と再評価
 │   │   └── assets/report.md
 │   ├── models-understanding/
 │   │   ├── SKILL.md                # 構成・性能と変更への反応から性格を把握
@@ -144,15 +145,16 @@ MLflowやローカルに保存した結果は原本を参照し、判断に必�
 [記録手順](skills/analyze/references/history-recording.md)にJSONの項目とCLI操作をまとめています。
 [チューニング・EDAの履歴記入例](docs/examples/analysis-deliverables.md)では、各試行の記録内容を確認できます。
 
-モデル関連の[データ利用方針](skills/modeling/SKILL.md#データの利用方針)はmodelingを正本とし、
-初期AV、開発データ内の反復、根拠を伴う最終評価・再評価と利用履歴を扱います。
+モデル関連の[データ利用方針](skills/modeling/references/data-usage.md)を共通の正本とし、
+train・valid・pretest・testの役割、利用できる区分の選択、AVと開発側の裏付けに基づくtest評価・再評価を扱います。
+testは最終ホールドアウトで、必要な場合に開発開始前に確保します。4分割は必須ではありません。
 個別の比較・診断の完了条件は専門Skillが定め、全体の進行担当が継続・終了を判断します。
 委任された専門Skillはrunを返し、共有履歴・state・`output.md`は全体進行担当が更新します。
 単独実行の出力先は各Skillの指定に従います。
 
 モデルのパラメータを調整する案件では、modelingが[チューニングSkill](skills/parameter-tuning/SKILL.md)を読みます。
 分類・回帰・ランキングの標準指標と独自指標から目的に合う基準を選び、候補間の比較と採用判断を進めます。
-診断は同じモデルをtrain・validへ適用した性能比較を基本とし、追加の統計診断は必要に応じて選びます。
+診断は学習側と利用できるvalid・pretestの性能比較を基本とし、追加の統計診断は必要に応じて選びます。
 
 特徴量の削減・追加・変換を扱う案件では、modelingが[特徴量設計Skill](skills/feature-design/SKILL.md)を使います。
 仮説を特徴量へ具体化し、候補集合の再学習で性能・入力依存・処理負担を比較します。
@@ -162,7 +164,8 @@ MLflowやローカルに保存した結果は原本を参照し、判断に必�
 予測が外れる対象・条件を調べる案件では、[誤差分析Skill](skills/error-analysis/SKILL.md)を使います。
 分類・回帰・ランキングの予測と正解について、全体・比較するセグメント・計測する指標や図を先に決め、一括で診断・報告して完了します。
 事例確認、SHAPやbootstrapも必要なものを事前に選びます。結果から生じた新しい疑問や改善案は次の分析候補に残します。
-診断だけならホールドアウトは未使用に保ち、改善の実行・採用比較は対応する分析へ渡します。
+開発中の診断とtest評価後の課題分析に使い、変更前後で新たな苦手領域や既存の苦手の悪化も確認します。
+改善の実行・採用比較とtestへ進む判断は全体進行担当へ返します。
 [レポート雛形](skills/error-analysis/assets/report.md)は、検証項目の報告、傾向が見つかった項目、それぞれの検証方法と内容、適用範囲と次の検証、参考の順にまとめます。
 全項目の結果を先に示し、特徴的な傾向から方法と根拠を辿れるようにします。
 
