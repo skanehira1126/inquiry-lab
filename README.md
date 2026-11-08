@@ -142,7 +142,7 @@ MLflowやローカルに保存した結果は原本を参照し、判断に必�
 チューニングのレポートは「結論」「モデルの性能と診断」「調整方針と検証」「適用範囲と残る課題」
 「参考」の5章を使います。調整ごとに、観測・意図・比較結果・判断をつなぎ、小見出しは案件に合わせます。
 共通Skillは分析先の準備、試行と判断の記録、再開、総評を担当します。
-[記録手順](skills/analyze/references/history-recording.md)にJSONの項目とCLI操作をまとめています。
+[共通手順](skills/analyze/references/history-recording.md)に分析先・runの準備、記録の担当、履歴JSONの項目とCLI操作をまとめています。
 [チューニング・EDAの履歴記入例](docs/examples/analysis-deliverables.md)では、各試行の記録内容を確認できます。
 
 モデル関連の[データ利用方針](skills/modeling/references/data-usage.md)を共通の正本とし、

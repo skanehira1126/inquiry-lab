@@ -24,10 +24,8 @@ description: "予測モデルの新規構築・改善、範囲を指定した設
 [評価設計](../parameter-tuning/references/evaluation.md)で比較条件を揃え、前処理は学習部分で学習する。
 開発データとtestの範囲・利用履歴を確認し、下の方針で扱う。
 
-新規の分析先は `inquiry-lab init <分析先> --title "タイトル"` で用意し、既存の分析先・未完了runは引き継ぐ。
-追加runには `inquiry-lab run new --workspace <分析先> --title "タイトル"` を使い、返された保存先を使う。
-依頼へ目的・今回の範囲・制約を記し、[履歴](../analyze/references/history-recording.md)と
-[state](../analyze/references/state.md)の共通手順で開始・判断・中断時の記録を揃える。全体の進行とstateはmodelingの担当者が持つ。
+[分析先と履歴の共通手順](../analyze/references/history-recording.md)で依頼・run・履歴・stateを準備し、
+開始・判断・中断時の記録を揃える。全体の進行とstateはmodelingの担当者が持つ。
 stateは共通のschema version 1を使い、個別作業は一つずつ進める。
 開始・再開・委任時は [modelingの状態管理](references/state.md) に従い、採用中のモデルと今回の対象を区別する。
 

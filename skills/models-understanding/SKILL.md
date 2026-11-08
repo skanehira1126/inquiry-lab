@@ -6,8 +6,8 @@ description: "学習済みモデルの構成・性能・入力の使われ方と
 # モデルの性格を把握する
 
 現在のモデルが何を使い、どう振る舞うかを理解し、改善方針を考える材料を返す。
-学習・改善の進行と次の行動の決定は [modeling](../modeling/SKILL.md) が担当する。
-依頼・run・履歴は [analyze](../analyze/SKILL.md) の共通手順を使い、全体のstateと統合レポートは呼出元が持つ。
+次の行動は呼出元が決め、モデルの構築・改善へ進む場合は [modeling](../modeling/SKILL.md) を使う。
+依頼・run・履歴・stateには[分析先と履歴の共通手順](../analyze/references/history-recording.md)を使う。
 
 ## 入力
 

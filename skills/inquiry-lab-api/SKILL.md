@@ -1,6 +1,6 @@
 ---
 name: inquiry-lab-api
-description: "inquiry-labのPython APIを使うコードの実装・修正や、利用できる関数の確認に使う。用途に合う公開関数を選び、入力条件・呼び出し方・保存方法を確認する。分析全体の設計・進行はanalyze、分析方法の判断は各専門Skillが扱う。"
+description: "inquiry-labのPython APIを使うコードの実装・修正や、利用できる関数の確認に使う。用途に合う公開関数を選び、入力条件・呼び出し方・保存方法を確認する。分析全体の設計・進行はanalyzeまたはmodeling、分析方法の判断は各専門Skillが扱う。"
 ---
 
 # inquiry-labのAPIを使う

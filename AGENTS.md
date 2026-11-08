@@ -87,6 +87,7 @@ CLIによる学習・探索の自動実行は未実装。
 - `skills/analyze/SKILL.md`：目的・判断基準の整理と、結果に応じた分析の進行判断。
   EDAとモデルの理解・誤差診断を扱い、設定比較・特徴量設計はmodelingへ渡す。
   再開に必要な情報と作業履歴の共通構成を扱う。CLIでJSONを記録してMarkdownを生成できる。
+  分析先・runの準備と履歴の記録は `skills/analyze/references/history-recording.md` に集約し、各Skillから直接参照する。
   案件別の定量指標や未実装の段階別Skill・CLIを前提にしない。
 - `skills/modeling/SKILL.md`：学習・評価と性格把握から、広い仮説探索・深掘り・見立ての更新を繰り返す。
   初期構成・設定探索、仮説生成、行動選択、時間内での終了判断の正本。
