@@ -9,7 +9,7 @@ from matplotlib import image, pyplot
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
-from inquiry_lab.visualize.common import plot_histogram, plot_scatter
+from inquiry_lab.visualize.common import plot_count, plot_histogram, plot_scatter
 
 
 @pytest.mark.parametrize("hue", [None, "group"])
@@ -169,12 +169,12 @@ def test_scatter_rejects_too_many_groups_before_creating_output(tmp_path):
     assert not output.parent.exists()
 
 
-@pytest.mark.parametrize("plot", [plot_histogram, plot_scatter])
+@pytest.mark.parametrize("plot", [plot_histogram, plot_scatter, plot_count])
 def test_png_style_is_fixed_without_changing_caller_settings_or_open_figures(
     tmp_path, monkeypatch, plot
 ):
     df = pl.DataFrame({"group": [0, 0, 1, 1], "value": [0.1, 0.4, 0.35, 0.8]})
-    columns = {"column": "value"} if plot is plot_histogram else {"x": "value", "y": "group"}
+    columns = {"x": "value", "y": "group"} if plot is plot_scatter else {"column": "value"}
     default_output = tmp_path / "default.png"
     output = tmp_path / "custom.png"
     output.write_bytes(b"old output")
@@ -195,11 +195,11 @@ def test_png_style_is_fixed_without_changing_caller_settings_or_open_figures(
     assert pixels[:, :, :3].min() < 0.5
 
 
-@pytest.mark.parametrize("plot", [plot_histogram, plot_scatter])
+@pytest.mark.parametrize("plot", [plot_histogram, plot_scatter, plot_count])
 def test_unsupported_format_does_not_overwrite_output(tmp_path, plot):
     output = tmp_path / "hist.txt"
     output.write_text("keep")
-    columns = {"column": "value"} if plot is plot_histogram else {"x": "value", "y": "label"}
+    columns = {"x": "value", "y": "label"} if plot is plot_scatter else {"column": "value"}
     with pytest.raises(ValueError, match="extension"):
         plot(pl.DataFrame({"label": [0, 1], "value": [0.2, 0.8]}), **columns, output=output)
     assert output.read_text() == "keep"
@@ -231,3 +231,112 @@ def test_pdf_supports_twenty_single_point_groups(tmp_path, monkeypatch, plot):
     if plot is plot_histogram:
         labels = [tick.get_window_extent() for tick in figure.axes[0].get_yticklabels()]
         assert all(upper.y0 >= lower.y1 for upper, lower in pairwise(labels))
+
+
+@pytest.mark.parametrize("aggregated", [False, True])
+@pytest.mark.parametrize("normalize", [False, True])
+@pytest.mark.parametrize("hue", [None, "origin"])
+def test_count_aligns_categories_and_matches_aggregated_counts(
+    tmp_path, monkeypatch, aggregated, normalize, hue
+):
+    if aggregated:
+        df = pl.DataFrame(
+            {
+                "total": ["b", "a", "a", "c", "a"],
+                "origin": ["dev", "dev", "dev", "test", "test"],
+                "category": [1, 1, 2, 1, 1],
+            }
+        )
+    else:
+        df = pl.DataFrame(
+            {"total": ["b", "a", "a", "a", "c", "a"], "origin": ["dev"] * 4 + ["test"] * 2}
+        )
+    original = df.clone()
+    savefig = Figure.savefig
+    figures = []
+
+    def capture(self, *args, **kwargs):
+        figures.append(self)
+        return savefig(self, *args, **kwargs)
+
+    monkeypatch.setattr(Figure, "savefig", capture)
+    output = tmp_path / "artifacts" / "count.svg"
+    assert (
+        plot_count(
+            df,
+            column="total",
+            hue=hue,
+            count="category" if aggregated else None,
+            normalize=normalize,
+            output=output,
+        )
+        == output
+    )
+    assert df.equals(original)
+    ET.parse(output)
+    ax = figures[0].axes[0]
+    expected = np.array([[3, 1, 0], [1, 0, 1]], dtype=float)
+    names = ["dev (n = 4)", "test (n = 2)"]
+    if hue is None:
+        expected = np.array([[4, 1, 1]], dtype=float)
+        names = ["All (n = 6)"]
+    if normalize:
+        expected /= expected.sum(axis=1, keepdims=True)
+    np.testing.assert_allclose(
+        [[bar.get_width() for bar in container] for container in ax.containers], expected
+    )
+    assert [tick.get_text() for tick in ax.get_yticklabels()] == ["a", "b", "c"]
+    assert [text.get_text() for text in ax.get_legend().get_texts()] == names
+    assert ax.get_xlabel() == ("Share within each group" if normalize else "Count")
+    if hue is not None:
+        assert ax.containers[0][0].get_y() != ax.containers[1][0].get_y()
+
+
+@pytest.mark.parametrize(
+    "df",
+    [
+        pl.DataFrame({"category": []}),
+        pl.DataFrame({"other": ["a"]}),
+        pl.DataFrame({"category": ["a", None]}),
+        pl.DataFrame({"category": [["a"], ["b"]]}),
+        pl.DataFrame({"category": [0.0, float("inf")]}),
+        pl.DataFrame({"category": range(21)}),
+    ],
+)
+def test_count_rejects_invalid_categories_before_creating_output(tmp_path, df):
+    output = tmp_path / "artifacts" / "count.png"
+    with pytest.raises(ValueError):
+        plot_count(df, column="category", output=output)
+    assert not output.parent.exists()
+
+
+@pytest.mark.parametrize("weights", [[-1, 2], [1, None], [1.5, 2.0], [True, False]])
+def test_count_rejects_invalid_supplied_counts_without_overwriting(tmp_path, weights):
+    output = tmp_path / "count.png"
+    output.write_bytes(b"keep")
+    df = pl.DataFrame({"category": ["a", "b"], "n": weights})
+    with pytest.raises(ValueError, match="non-negative integers"):
+        plot_count(df, column="category", count="n", output=output)
+    assert output.read_bytes() == b"keep"
+
+
+def test_count_requires_existing_count_and_hue_columns(tmp_path):
+    df = pl.DataFrame({"category": ["a"]})
+    output = tmp_path / "artifacts" / "count.png"
+    for option in ["count", "hue"]:
+        with pytest.raises(ValueError, match="existing column"):
+            plot_count(df, column="category", **{option: "missing"}, output=output)
+    assert not output.parent.exists()
+
+
+def test_count_preserves_zero_counts_but_rejects_undefined_group_proportions(tmp_path):
+    df = pl.DataFrame({"category": ["a", "b"], "origin": ["dev", "test"], "n": [0, 3]})
+    output = tmp_path / "count.pdf"
+    plot_count(df, column="category", hue="origin", count="n", output=output)
+    assert output.read_bytes().startswith(b"%PDF-")
+    normalized = tmp_path / "artifacts" / "proportions.png"
+    with pytest.raises(ValueError, match="positive total"):
+        plot_count(
+            df, column="category", hue="origin", count="n", normalize=True, output=normalized
+        )
+    assert not normalized.parent.exists()

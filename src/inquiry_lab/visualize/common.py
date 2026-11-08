@@ -7,7 +7,7 @@ import numpy as np
 import polars as pl
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
-from matplotlib.ticker import MaxNLocator
+from matplotlib.ticker import MaxNLocator, PercentFormatter
 
 
 def plot_histogram(
@@ -150,6 +150,104 @@ def plot_scatter(
     return output
 
 
+def plot_count(
+    df: pl.DataFrame,
+    *,
+    output: str | Path,
+    column: str,
+    hue: str | None = None,
+    count: str | None = None,
+    normalize: bool = False,
+) -> Path:
+    """Save horizontal category counts, optionally grouped or normalized.
+
+    Count each input row once unless ``count`` names a non-negative integer
+    count column. Sum supplied counts for repeated categories within each hue
+    group; aggregated input is never detected automatically. With ``normalize``,
+    divide by each group's total count. Zero-total groups have undefined shares
+    and are rejected in normalized mode.
+
+    Categories and hue groups are sorted by value, each limited to 20. Numeric
+    category values remain categories. Missing combinations are shown as zero;
+    nulls, non-finite values, and nested/object categories are rejected.
+    Hue bars are side by side and legend counts reflect total observations,
+    including for aggregated inputs. All categories are shown without truncation.
+
+    Save PNG (900 x 900 px), SVG, or PDF, creating parents and overwriting output.
+    Return its Path without changing df, caller styles, or open pyplot figures.
+    Invalid inputs raise ValueError before creating directories or saving a file.
+    """
+    output = Path(output)
+    if output.suffix.lower() not in {".png", ".svg", ".pdf"}:
+        raise ValueError("output must have a .png, .svg, or .pdf extension")
+    if df.is_empty():
+        raise ValueError("df must contain at least one row")
+    categories = _category_values(df, column)
+    if len(categories) > 20:
+        raise ValueError("column must contain at most 20 categories")
+    if count is not None:
+        if count not in df.columns:
+            raise ValueError("count must name an existing column")
+        weights = df.get_column(count)
+        if weights.null_count() or not weights.dtype.is_integer() or (weights < 0).any():
+            raise ValueError("count column must contain non-negative integers with no nulls")
+
+    groups, _ = _plot_groups(df, hue)
+    group_counts = []
+    names = []
+    for group in groups:
+        if count is None:
+            data = group.select(category=pl.col(column)).group_by("category").agg(total=pl.len())
+        else:
+            data = group.select(category=pl.col(column), total=pl.col(count))
+        totals = {value: 0 for value in categories}
+        for value, weight in data.iter_rows():
+            totals[value] += weight
+        total = sum(totals.values())
+        if normalize and not total:
+            raise ValueError("each group must have a positive total count to normalize")
+        group_counts.append([value / total if normalize else value for value in totals.values()])
+        name = "All" if hue is None else str(group.get_column(hue)[0])
+        names.append(f"{name} (n = {total:,})")
+
+    style = {key: value for key, value in mpl.rcParamsDefault.items() if key != "backend"}
+    with mpl.rc_context(rc=style):
+        figure = Figure(figsize=(6, 6), dpi=150, layout="constrained")
+        FigureCanvasAgg(figure)
+        ax = figure.subplots()
+        palette = mpl.colormaps["tab10" if len(groups) <= 10 else "tab20"]
+        positions = np.arange(len(categories))
+        height = 0.8 / len(groups)
+        for index, (values, name) in enumerate(zip(group_counts, names, strict=True)):
+            ax.barh(
+                positions + (index - (len(groups) - 1) / 2) * height,
+                values,
+                height=height,
+                color=palette(index),
+                alpha=0.8,
+                label=name,
+            )
+        ax.set_yticks(positions, labels=[str(value) for value in categories], fontsize=9)
+        ax.set(
+            title="Category proportions" if normalize else "Category counts",
+            xlabel="Share within each group" if normalize else "Count",
+            ylabel=column,
+            xlim=(0, 1 if normalize else None),
+            ylim=(len(categories) - 0.5, -0.5),
+        )
+        if normalize:
+            ax.xaxis.set_major_formatter(PercentFormatter(xmax=1))
+        else:
+            ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+        ax.grid(visible=True, axis="x", color="#e5e7eb", linewidth=0.8)
+        ax.set_axisbelow(True)
+        ax.legend(title=hue, loc="best", ncols=(len(groups) + 4) // 5, fontsize=8)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        figure.savefig(output, format=output.suffix[1:].lower(), dpi=150)
+
+    return output
+
+
 def _numeric_values(df: pl.DataFrame, column: str) -> np.ndarray:
     if column not in df.columns:
         raise ValueError(f"column {column!r} must name an existing column")
@@ -167,16 +265,7 @@ def _numeric_values(df: pl.DataFrame, column: str) -> np.ndarray:
 def _plot_groups(df: pl.DataFrame, hue: str | None) -> tuple[list[pl.DataFrame], list[str]]:
     if hue is None:
         return [df], [f"All (n = {len(df):,})"]
-    if hue not in df.columns:
-        raise ValueError("hue must name an existing column")
-    values = df.get_column(hue)
-    if values.null_count():
-        raise ValueError("hue column must not contain nulls")
-    if values.dtype.is_nested() or values.dtype == pl.Object:
-        raise ValueError("hue column must contain sortable scalar values")
-    if values.dtype.is_float() and not values.is_finite().all():
-        raise ValueError("hue column must contain only finite values")
-    categories = values.unique().sort().to_list()
+    categories = _category_values(df, hue)
     if len(categories) > 20:
         raise ValueError("hue column must contain at most 20 groups")
     groups = [df.filter(pl.col(hue) == value) for value in categories]
@@ -184,3 +273,16 @@ def _plot_groups(df: pl.DataFrame, hue: str | None) -> tuple[list[pl.DataFrame],
         f"{value} (n = {len(group):,})" for value, group in zip(categories, groups, strict=True)
     ]
     return groups, names
+
+
+def _category_values(df: pl.DataFrame, column: str) -> list:
+    if column not in df.columns:
+        raise ValueError(f"column {column!r} must name an existing column")
+    values = df.get_column(column)
+    if values.null_count():
+        raise ValueError(f"column {column!r} must not contain nulls")
+    if values.dtype.is_nested() or values.dtype == pl.Object:
+        raise ValueError(f"column {column!r} must contain sortable scalar values")
+    if values.dtype.is_float() and not values.is_finite().all():
+        raise ValueError(f"column {column!r} must contain only finite values")
+    return values.unique().sort().to_list()

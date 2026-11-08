@@ -19,8 +19,13 @@ Notebook Workbenchにも同等CLIを残せるが、inquiry-labは実行時に依
 `visualize.common.plot_histogram` は一般の数値列の分布を保存し、任意の `hue` 列で色分けする。
 横軸と配色を共有した群別の箱ひげ図を上部に添える。
 `visualize.common.plot_scatter` は2つの数値列の関係を散布図で保存し、任意の `hue` 列で色分けする。
+`visualize.common.plot_count` はカテゴリ別件数・群内割合を棒グラフで保存し、未集計なら行数、集計済みなら指定件数列を合計する。
 `plot_calibration_curve` は確率の較正曲線と、同じビンのサンプル数を重ねて保存する。
 `skills/analyze/` が分析の進行・記録・最終レポートを扱う。
+`skills/modeling/` は予測モデルの新規構築・改善、範囲を指定した設定比較・特徴量設計の入口。
+学習・評価と性格把握を出発点に、広い仮説探索と深掘りを繰り返し、事実から全体の見立てを更新する。
+`skills/models-understanding/` は構成・性能・入力依存と過去の変更への反応から性格を帰納的に把握し、runで返す。
+必要な範囲の誤差分析を使い、次の行動の決定は呼出元が担当する。
 `skills/eda/` は1shotの探索を担い、表形式・イベントと反復観測・予測準備の参照を組み合わせ、一括で観察・報告する。
 `skills/eda-loop/` は各回のEDAを独立したサブエージェントへ委任し、親が次の依頼・方向転換・停止を判断する。
 新しい子コンテキストを作れる環境を前提とし、同一エージェントでの反復へは切り替えない。`eda` 単独の1shot利用は可能。
@@ -28,19 +33,19 @@ Notebook Workbenchにも同等CLIを残せるが、inquiry-labは実行時に依
 設定の比較・選定、特徴量の選択・設計、モデルの誤差診断をそれぞれ扱う。
 各Skillの基本手順と終了条件は `SKILL.md`、詳細は `references/`、レポート雛形は `assets/` に置く。
 レポート雛形は見出しと最低限の項目に絞り、執筆指示はSkillの出力節または参照文書を正本とする。
-分析の入口はanalyzeに揃え、EDAを含む専門Skillの自動選択は無効にする。
+分析の入口はanalyzeとmodelingとし、EDAを含む専門Skillの自動選択は無効にする。
 `skills/inquiry-lab-api/` は実装時の公開関数の選択・入力条件・呼び出し方を扱い、自動選択を有効にする。
 分析方法・終了判断は分析側に残し、APIの詳細と使用例はこのSkillの `references/` に集約する。
 プラグインmanifestとリポジトリ用marketplaceで、このSkillを提供する。
 段階別Skill、分析レポート自動生成、MCPサーバー、
-独自モデルループは未実装。
+CLIによる学習・探索の自動実行は未実装。
 過去の引き継ぎにある構想を、実装済みの機能や確定した仕様として扱わない。
 
 ## 実装の入口と開発方針
 
 - `.codex-plugin/plugin.json`：リポジトリ直下をプラグインとし、`./skills/` を参照する。
 - `.agents/skills/create-analysis-template/SKILL.md`：分析テンプレートを作成・改訂するリポジトリ開発用Skill。
-  `skills/<テーマ名>/` に独立したSkillと雛形を追加し、analyzeの選択表を更新する。
+  `skills/<テーマ名>/` に独立したSkillと雛形を追加し、担当する入口から参照する。
 - `.agents/plugins/marketplace.json`：`source.path: "./"` で同プラグインを公開する。
   プラグインの導入とPython CLIの導入を区別し、不要なMCPやhookを追加しない。
 - `src/inquiry_lab/cli.py`：引数解析とCLIハンドラー。
@@ -56,7 +61,7 @@ Notebook Workbenchにも同等CLIを残せるが、inquiry-labは実行時に依
 - `src/inquiry_lab/state.py`：全体の目標・終了条件と現在の個別作業を`state.json`へ保存する。
   全体置換前にschemaを検査し、UTCの更新日時を付け、同一ディレクトリ内から置き換える。
   showは状態全体を省略せず表示する。contextは明示したworkspaceからSessionStart用JSONを返す。
-  更新者はanalyzeの一人とし、子はrunを返す。状態遷移や完了の自動判定はしない。
+  更新者はanalyzeまたはmodelingの全体進行担当一人とし、子はrunを返す。状態遷移や完了の自動判定はしない。
   `skills/analyze/references/state.md`が項目・更新・復元・任意hook設定の正本。テストは`tests/test_state.py`。
 - `src/inquiry_lab/workspace.py`：テンプレート読込と展開。
   テンプレートは `importlib.resources` から読み、インストール先や実行時のcwdに依存させない。
@@ -67,6 +72,8 @@ Notebook Workbenchにも同等CLIを残せるが、inquiry-labは実行時に依
   上部の箱ひげ図は中央値・四分位範囲・1.5 IQRのひげと外側の点を示す。
   `plot_scatter` は数値列 `x`・`y` と任意の `hue` を受け取り、同じ行の値を1点として全行を描画する。
   両関数とも指定列の欠損・非有限値を拒否し、群の値順に配色して件数を添える。
+  `plot_count`はカテゴリ列`column`、任意の`hue`・集計済み件数列`count`を受け取り、横棒を並べる。
+  `normalize=True`で群内割合を表示する。カテゴリ・群は各20まで、件数列は非負整数とし、合計0の群は割合表示で拒否する。
 - `src/inquiry_lab/visualize/ml/classifier.py`：分類モデル向けのROC曲線・較正曲線の描画と保存。
   配色・レイアウトを固定し、Figure・Axesや任意の描画オプションを公開しない。
   Polars DataFrameと列名を受け取り、既定の列名は `label` と `score`。
@@ -78,8 +85,18 @@ Notebook Workbenchにも同等CLIを残せるが、inquiry-labは実行時に依
   EDAの正本は `skills/eda/assets/result.md` とし、変更時は同じ内容を `templates/eda-result.md` へコピーして一致を検証する。
 - `tests/test_cli.py`：CLIの公開挙動、生成物、既存データの保護、展開失敗時の後始末を検証する。
 - `skills/analyze/SKILL.md`：目的・判断基準の整理と、結果に応じた分析の進行判断。
+  EDAとモデルの理解・誤差診断を扱い、設定比較・特徴量設計はmodelingへ渡す。
   再開に必要な情報と作業履歴の共通構成を扱う。CLIでJSONを記録してMarkdownを生成できる。
   案件別の定量指標や未実装の段階別Skill・CLIを前提にしない。
+- `skills/modeling/SKILL.md`：学習・評価と性格把握から、広い仮説探索・深掘り・見立ての更新を繰り返す。
+  初期構成・設定探索、仮説生成、行動選択、時間内での終了判断の正本。
+  モデル関連Skillに共通するデータ利用方針もここに置き、専門Skillは参照する。
+  共通の履歴・stateを使い、`references/state.md`でモデルの参照と委任・再開を定める。
+  `assets/report.md`で改善結果と現在地を報告する。
+- `skills/models-understanding/SKILL.md`：モデルの構成・性能・入力依存・変更への反応をつなげる。
+  定石は仮説の出発点とし、実測から適用範囲と不確実性を伴う見立てを更新する。誤差分析は必要に応じて使う。
+  更新後は旧モデルと同じ対象で予測差と誤りの変化を確認し、全体指標に表れない違いも評価する。
+  `assets/report.md`の3章でrun結果を返し、直接実行でも`output.md`は更新しない。
 - `skills/eda/SKILL.md`：データを説明するための暫定的な質問を立て、1shotで確認・評価・報告するEDAの入口。全体像の把握では広い視点を検討し、データの形・観測の構造・利用目的に応じて
   `references/` の見方を組み合わせる。利用予定のデータセット固有の列名や規則を共通の前提にしない。
   EDAの見方を追加する場合はここを改訂する。依頼・実行記録はanalyzeの共通手順を使い、結果からの追加探索は行わない。
@@ -88,10 +105,12 @@ Notebook Workbenchにも同等CLIを残せるが、inquiry-labは実行時に依
 - `skills/eda-loop/SKILL.md`：1shotのEDAを毎回新しい子へ委任する外側の探索ループ。必要な調査済み範囲と根拠を渡し、
   質問の見直し、次の依頼・継続・停止と知見の統合を担当する。観察手法と依頼契約は `eda` を使い、`assets/report.md` で `output.md` を作る。
   想定質問と回答はrunに残す。統合レポートは全体の総括と、各観点の知見・探索経緯・未確認の範囲を示し、詳細を各runへつなぐ。
-- `skills/parameter-tuning/SKILL.md`：設定の探索・比較と最終評価の終了条件。
-- `skills/feature-design/SKILL.md`：特徴量の削減・追加・変換を再学習で比較する手順と終了条件。
+- `skills/parameter-tuning/SKILL.md`：設定の探索・比較と、依頼された評価の完了条件。
+- `skills/feature-design/SKILL.md`：経験的な仮説や診断から特徴量の削減・追加・変換を考え、再学習で比較する手順と終了条件。
+  仮説を特徴量へ具体化する方法、候補集合の共同評価と表現の採用基準の正本。
 - `skills/error-analysis/SKILL.md`：計画した範囲の誤差を一括診断し、報告して終了する手順。
-  各Skillはanalyzeの共通記録を使い、テーマ追加では独立したSkill・雛形とanalyzeの選択表を更新する。
+  各Skillはanalyzeの共通記録を使い、委任時はrunを返す。共有履歴・state・統合レポートは全体進行担当が更新する。
+  テーマ追加では独立したSkill・雛形と、担当する入口の参照を更新する。
 - `pyproject.toml`：Python 3.12以降、Flitによる配布、pytestとRuffによる検証を定義する。
   基本の実行時依存はParquet対応のPyArrow。可視化用extraはmatplotlib・NumPy・Polars・scikit-learn。
   開発環境ではextraも導入する。依存を追加する場合は必要性と配布への影響を確認する。
@@ -139,7 +158,7 @@ uv build
 引き継ぎでは、Codex上で分析の問い・手法選択・反復探索・解釈・報告を支援する方向性が
 示されている。状況に応じた判断をSkill、機械的な整合性保証をCLIに置く案があるが、
 具体的な責務分担は拡張時の要件と現行コードに照らして決める。
-MCPの追加や独自モデルループを、初版の前提として先行実装しない。
+MCPの追加やCLIによる学習・探索の自動実行を、初版の前提として先行実装しない。
 
 Notebook Workbenchの分析Skill、analysis CLI、Notebook実行基盤はそれぞれ分けて移行要否を検討する。
 現在のinquiry-labにNotebook Workbenchへの実行時依存はない。

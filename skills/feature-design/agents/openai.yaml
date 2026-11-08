@@ -1,5 +1,5 @@
 interface:
   display_name: "特徴量の選択・設計"
-  short_description: "特徴量の削減・追加・変換を再学習で比較し、性能と入力負担から選ぶ"
+  short_description: "仮説に基づく特徴量の表現を、再学習後の性能・入力依存・処理負担から選ぶ"
 policy:
   allow_implicit_invocation: false

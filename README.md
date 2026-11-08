@@ -2,7 +2,7 @@
 
 分析の進行を支援するCodexプラグインと、分析ワークスペースを作るPython CLIです。
 プラグインには、目的と判断基準を整理し、試行結果に応じて次の作業を選ぶ
-`analyze`、一括で観察する `eda`、探索を繰り返す `eda-loop`、`parameter-tuning`、`feature-design`、`error-analysis` を同梱しています。
+`analyze`、モデルの構築・改善を進める `modeling`、性格を把握する `models-understanding`、一括で観察する `eda`、探索を繰り返す `eda-loop`、`parameter-tuning`、`feature-design`、`error-analysis` を同梱しています。
 コードの実装には `inquiry-lab-api` が公開関数の選択・入力条件・呼び出し方を案内します。
 EDAは表形式・イベントと反復観測・予測準備の参照を組み合わせて使います。
 テンプレート集はモデルのパラメータチューニング、特徴量選択・エンジニアリング、誤差分析を提供しています。
@@ -16,7 +16,7 @@ Python APIの `visualize` は、固定した見た目で分析用の図を描画
 Pythonスクリプト、SQL、Notebookなど任意の方法で分析し、問いと根拠、現在の結論を
 Markdownでつなげて残せます。CLIはエージェントが判断した状態を保存しますが、分析の実行、結果の検証・採用、完了を
 自動判定しません。段階別Skill、分析レポートの自動生成、MCPサーバー、
-独自モデルループは未実装です。
+CLIによる学習・探索の自動実行は未実装です。
 
 ## プラグインの導入
 
@@ -44,6 +44,15 @@ inquiry-lab/
 │   ├── analyze/
 │   │   ├── SKILL.md
 │   │   └── agents/openai.yaml
+│   ├── modeling/
+│   │   ├── SKILL.md                # 学習・評価、広い仮説探索と深掘りによる改善
+│   │   ├── agents/openai.yaml
+│   │   ├── references/state.md    # 共通stateの利用、再開と一件ずつの委任
+│   │   └── assets/report.md
+│   ├── models-understanding/
+│   │   ├── SKILL.md                # 構成・性能と変更への反応から性格を把握
+│   │   ├── agents/openai.yaml
+│   │   └── assets/report.md
 │   ├── inquiry-lab-api/
 │   │   ├── SKILL.md                # 実装時の公開関数の選択と利用条件
 │   │   ├── agents/openai.yaml
@@ -83,14 +92,27 @@ inquiry-lab/
 ```
 
 marketplaceの `source.path` は `./` で、このリポジトリのルートを参照します。
-新しい分析テーマは `skills/<テーマ名>/` に独立したSkillと雛形を置き、analyzeの選択表へ追加します。
+新しい分析テーマは `skills/<テーマ名>/` に独立したSkillと雛形を置き、担当する入口のanalyzeまたはmodelingから参照します。
 EDAで使う見方の追加は、`eda` の参照文書と選択条件を改訂します。
 
-## 分析の入口：analyze
+## 分析の入口：analyzeとmodeling
+
+[modeling](skills/modeling/SKILL.md) は、予測モデルの新規構築・改善、範囲を指定した設定比較・特徴量設計の入口です。
+現在のデータで学習・評価し、`models-understanding`で性格を把握して、広い仮説探索と深掘りを繰り返します。
+比較範囲が決まっている場合は、既存の結果を引き継いで対応する専門Skillを使い、その範囲の結果を返します。
+初期構成・粗い設定探索、仮説の作り方、行動選択と時間内での区切り方はSkillに定めています。
+状態管理はanalyzeの共通スキーマを使い、[modelingの状態管理](skills/modeling/references/state.md)で採用中モデル・今回の対象・実行情報を引き継ぎます。
+「`$inquiry-lab:modeling` を使って、現在のデータでモデルを作り、仮説の探索と深掘りを繰り返して改善して」と依頼できます。
+
+[models-understanding](skills/models-understanding/SKILL.md) は、構成・性能・入力の使われ方と過去の変更への反応から、モデルの性格を帰納的に捉えます。
+importance・係数・SHAP・permutation importanceを必要に応じて選び、説明が足りない点には誤差分析を使います。
+定石を仮説の出発点とし、実測に合わせて見立てを更新します。出力はrunの「現在の性格」「変更から分かったこと」「未確認の点と次の候補」です。
+直接実行でも`output.md`は更新せず、変更実験や次の行動の決定は呼出元が担当します。
 
 [analyze](skills/analyze/SKILL.md) は、分析目的を受け取り、対話で問いと判断基準を詰め、
-試行と評価を繰り返し、総評をまとめるSkillです。一括のEDAには `eda`、反復探索には `eda-loop` を使い、モデルの比較・診断には
-`parameter-tuning`、`feature-design`、`error-analysis` から目的と入力に合うSkillを選びます。該当するものがなければ最初の試行に必要な情報から整理します。
+試行と評価を繰り返し、総評をまとめるSkillです。一括のEDAには `eda`、反復探索には `eda-loop` を使い、モデルの理解・診断には
+`models-understanding`、`error-analysis` から目的と入力に合うSkillを選びます。
+モデルを変更して比較・改善する依頼はmodelingへ渡します。該当するものがなければ最初の試行に必要な情報から整理します。
 
 プラグイン導入後は、たとえば「`$inquiry-lab:analyze` を使って、
 分析の目的と判断基準を整理し、必要な試行を進めて」と依頼します。
@@ -98,9 +120,9 @@ EDAで使う見方の追加は、`eda` の参照文書と選択条件を改訂�
 `skills/analyze/SKILL.md` を指定できます。
 `uv tool install .` によるCLI導入ではプラグインは登録されません。
 
-分析の入口は `analyze` です。各専門Skillの `allow_implicit_invocation: false` により、
+分析の入口は `analyze` と `modeling` で、自動選択を有効にしています。各専門Skillの `allow_implicit_invocation: false` により、
 `eda`・`eda-loop` を含めて自動選択を無効にしています。
-analyzeの選択表から必要なSkillを読む構成で、利用者が個別に呼ぶ必要はありません。
+各入口から必要な専門Skillを読む構成で、利用者が個別に呼ぶ必要はありません。
 明示的なSkill指定は引き続き利用できます。
 
 Python APIの利用は [inquiry-lab-api](skills/inquiry-lab-api/SKILL.md) が担当し、コードの実装や
@@ -122,20 +144,19 @@ MLflowやローカルに保存した結果は原本を参照し、判断に必�
 [記録手順](skills/analyze/references/history-recording.md)にJSONの項目とCLI操作をまとめています。
 [チューニング・EDAの履歴記入例](docs/examples/analysis-deliverables.md)では、各試行の記録内容を確認できます。
 
-テーマ固有のデータ利用制約と停止条件はテンプレート側で定め、analyzeはその条件を確認して進行・終了を判断します。
-チューニング・特徴量設計のテンプレートでは、最初に改善に使えるデータの範囲と最終評価用ホールドアウトの分割ルールを決めます。
-開発データ内では目的に応じて分割を変え、候補を支持する根拠が得られたときだけ最終評価へ進みます。
-候補を見送るときはホールドアウトを未使用のまま報告します。最終評価へ進んだ場合は、
-評価した時点で改善を終了し、事前に決めた指標と限界を総評にまとめます。
+モデル関連の[データ利用方針](skills/modeling/SKILL.md#データの利用方針)はmodelingを正本とし、
+初期AV、開発データ内の反復、根拠を伴う最終評価・再評価と利用履歴を扱います。
+個別の比較・診断の完了条件は専門Skillが定め、全体の進行担当が継続・終了を判断します。
+委任された専門Skillはrunを返し、共有履歴・state・`output.md`は全体進行担当が更新します。
+単独実行の出力先は各Skillの指定に従います。
 
-モデルのパラメータを調整する案件では、analyzeが[チューニングSkill](skills/parameter-tuning/SKILL.md)を読みます。
+モデルのパラメータを調整する案件では、modelingが[チューニングSkill](skills/parameter-tuning/SKILL.md)を読みます。
 分類・回帰・ランキングの標準指標と独自指標から目的に合う基準を選び、候補間の比較と採用判断を進めます。
+診断は同じモデルをtrain・validへ適用した性能比較を基本とし、追加の統計診断は必要に応じて選びます。
 
-特徴量の削減・追加・変換を扱う案件では、[特徴量設計Skill](skills/feature-design/SKILL.md)を使います。
-基本は同じ検証条件での予測性能と特徴量数で判断し、追加・変換と削減を結果に応じて繰り返します。
-コストなどは具体的な制約がある場合に加え、bootstrapやnested CVは必須にしません。
-基本の診断はbootstrapなしのSHAPとfeature importanceで、分割gainを提供する木モデルでは累積gain・平均gain・利用回数を確認します。
-重要度や誤差から変更候補を作り、再学習した比較で効果を確かめます。
+特徴量の削減・追加・変換を扱う案件では、modelingが[特徴量設計Skill](skills/feature-design/SKILL.md)を使います。
+仮説を特徴量へ具体化し、候補集合の再学習で性能・入力依存・処理負担を比較します。
+表現の設計・共同評価・採用基準はSkill、診断手法の選択は[models-understanding](skills/models-understanding/SKILL.md)を参照します。
 [レポート雛形](skills/feature-design/assets/report.md)では、変更の意図と検証結果、採否の根拠を対応づけます。
 
 予測が外れる対象・条件を調べる案件では、[誤差分析Skill](skills/error-analysis/SKILL.md)を使います。
@@ -340,7 +361,7 @@ inquiry-lab state context --workspace analyses/sales-change
 長いstateは本文を部分的に切り捨てず、保存先と`show`での確認を案内します。
 
 依頼文書は合意条件、historyは判断の経緯、runは実行根拠として残し、stateから参照します。
-更新するのはanalyzeの担当者で、個別作業の開始前・判断後・条件変更後・中断時に保存します。
+更新するのはanalyzeまたはmodelingで全体を進行する担当者で、個別作業の開始前・判断後・条件変更後・中断時に保存します。
 CLIは状態遷移や終了を自動判定しません。同時更新は後の保存が優先されるため、更新者を一人にします。
 JSONの項目、再開時の照合、hookの設定例は[全体状態の手順](skills/analyze/references/state.md)を参照してください。
 hookは設定と信頼操作が必要です。プラグインやCLIの導入だけでは有効になりません。
@@ -371,6 +392,7 @@ Polars DataFrameを受け取り、固定した見た目の図を保存します�
 | 用途 | 関数 | APIの詳細・使用例 |
 |---|---|---|
 | 一般の数値列・分類スコアの分布（箱ひげ図付き） | `plot_histogram` | [ヒストグラム](skills/inquiry-lab-api/references/histogram.md) |
+| カテゴリ別の件数・群内割合（未集計・集計済み入力） | `plot_count` | [カテゴリ別の件数・割合](skills/inquiry-lab-api/references/count.md) |
 | 数値列どうしの関係 | `plot_scatter` | [散布図](skills/inquiry-lab-api/references/scatter.md) |
 | 2値分類のROC曲線・AUC | `plot_roc_curve` | [分類モデルのグラフ](skills/inquiry-lab-api/references/classifier.md) |
 | 予測確率の較正とビンごとの件数 | `plot_calibration_curve` | [分類モデルのグラフ](skills/inquiry-lab-api/references/classifier.md) |
@@ -386,7 +408,7 @@ Polars DataFrameを受け取り、固定した見た目の図を保存します�
 目的、入力、比較手順、終了条件を `skills/<テーマ名>/SKILL.md` にまとめ、
 出力レポートの雛形を `assets/report.md`、必要な詳細を `references/` に置きます。
 雛形は見出しと最低限の項目に絞り、執筆指示はSkillの出力節や参照文書へまとめます。
-各Skillの自動選択を無効にし、analyzeの選択表へ登録します。
+専門Skillの自動選択を無効にし、担当する入口から参照します。入口のanalyze・modelingは自動選択を有効にします。
 繰り返し使う計算があれば、そのSkillの `scripts/` に同梱します。
 
 ```bash
