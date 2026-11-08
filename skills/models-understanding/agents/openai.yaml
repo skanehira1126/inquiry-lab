@@ -1,5 +1,5 @@
 interface:
-  display_name: "モデルの性格を把握する"
+  display_name: "Model Understanding"
   short_description: "構成・性能・入力依存と変更への反応からモデルの性格を帰納的に捉える"
 policy:
   allow_implicit_invocation: false

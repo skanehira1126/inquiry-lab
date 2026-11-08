@@ -1,5 +1,5 @@
 interface:
-  display_name: "パラメータチューニング"
+  display_name: "Parameter Tuning"
   short_description: "モデル設定を比較し、性能・費用と根拠から推奨する設定を選ぶ"
 policy:
   allow_implicit_invocation: false
