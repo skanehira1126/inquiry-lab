@@ -379,6 +379,33 @@ hookは設定と信頼操作が必要です。プラグインやCLIの導入だ�
 依頼文書が存在しない場合は拒否します。既存の番号を避けて作成し、空ディレクトリやリンクも上書きしません。
 展開中の書込失敗では、`init` は作成途中のワークスペース、`run new` は今回作ったrunだけを除去します。
 
+## Pythonで仮説と調査の木を作る
+
+`InquiryTree` は、分析の目的を表す Core を根にして、仮説と調査をメモリ上で管理します。
+ノードには木の中で一意のIDを付け、親を先に登録します。Core の子には仮説、
+仮説の子には仮説と調査を置けます。調査は葉になります。
+
+```python
+from inquiry_lab.tree_map import HypothesisNode, ResearchNode
+from inquiry_lab.tree_map.tree import InquiryTree
+
+tree = InquiryTree("Core-001", "着順の予測に役立つ要因を調べる")
+tree.add(HypothesisNode(id="H1", parent="Core-001", hypothesis="スタート力が着順に影響する"))
+tree.add(ResearchNode(id="R1", parent="H1", question="枠番別でもスタート力と着順は関係するか？"))
+
+assert tree.get("R1").parent == "H1"
+assert [node.id for node in tree.children_of("H1")] == ["R1"]
+assert [node.id for node in tree.ancestors_of("R1")] == ["H1", "Core-001"]
+```
+
+`children_of` は直下の子を登録順に、`ancestors_of` は直上の親から Core までを順に返します。
+葉の子や Core の祖先は空リストです。未登録IDの検索は `KeyError` になります。
+
+仮説の現在の回答は `result`、回答の変化は `history` に記録します。調査では
+`question` への回答を `result` に、run や図表の参照先を `references` に置きます。
+Core の `evidence_items` には知見 `finding` と根拠の `node_ids` を組にして残せます。
+ワークスペースの再開用スナップショットは、別途 `state update` で保存します。
+
 ## Pythonからグラフを保存する
 
 可視化を使う分析環境へ、追加依存を含めてインストールします。CLIだけの利用では不要です。
@@ -421,6 +448,9 @@ uv run ruff check .
 uv run ruff format --check .
 uv build
 ```
+
+`uv run tox` は Python 3.13 の pytest、Ruff（Polars のスタイル検査を含む）、ty を実行します。
+個別に実行する場合は `uv run tox -e py313`、`uv run tox -e ruff`、`uv run tox -e ty` を使います。
 
 CLIは `src/inquiry_lab/cli.py`、展開処理は `src/inquiry_lab/workspace.py` にあります。
 文章テンプレートは `src/inquiry_lab/templates/` に置き、配布パッケージに同梱しています。

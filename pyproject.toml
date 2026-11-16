@@ -9,7 +9,10 @@ description = "Execution-independent analysis workspace templates"
 readme = "README.md"
 requires-python = ">=3.12"
 license = { file = "LICENSE" }
-dependencies = ["pyarrow>=19"]
+dependencies = [
+    "pyarrow>=19",
+    "pydantic>=2.14.3",
+]
 
 [project.optional-dependencies]
 visualize = ["matplotlib>=3.10", "numpy>=1.26", "polars>=1", "scikit-learn>=1.4"]
@@ -18,7 +21,13 @@ visualize = ["matplotlib>=3.10", "numpy>=1.26", "polars>=1", "scikit-learn>=1.4"
 inquiry-lab = "inquiry_lab.cli:main"
 
 [dependency-groups]
-dev = ["pytest>=8,<10", "ruff>=0.9,<1", "inquiry-lab[visualize]"]
+dev = [
+    "inquiry-lab[visualize]",
+    "pytest>=8,<10",
+    "ruff>=0.9,<1",
+    "tox-uv>=1.10",
+    "ty==0.0.86",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -26,6 +35,25 @@ testpaths = ["tests"]
 [tool.ruff]
 target-version = "py312"
 line-length = 99
+extend-exclude = ["*.ipynb"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "B", "UP"]
+select = ["E", "W", "F", "C", "I", "B", "UP"]
+ignore = ["D211", "D212"]
+
+[tool.ruff.lint.isort]
+force-single-line = true
+force-sort-within-sections = true
+lines-after-imports = 2
+
+[tool.ty.src]
+include = ["src/inquiry_lab"]
+
+[tool.ty.rules]
+redundant-condition = "ignore"
