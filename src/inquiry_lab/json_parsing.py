@@ -1,4 +1,4 @@
-"""Unambiguous JSON input shared by inspection and state persistence."""
+"""Unambiguous JSON input for inspection and worker state files."""
 
 import json
 from typing import Any

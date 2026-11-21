@@ -6,7 +6,7 @@ description: "モデルベースの特徴量選択・設計。経験的な仮説
 # 特徴量の選択・設計
 
 現行の特徴量を維持するか、どの特徴量集合・生成方法へ変更するかを判断する。
-全体の進行は呼出元が担当し、依頼・run・履歴・stateには[分析先と履歴の共通手順](../analyze/references/history-recording.md)を使う。
+全体の進行は呼出元が担当し、依頼・run・履歴・treeには[分析先と履歴の共通手順](../analyze/references/history-recording.md)を使う。
 このSkillは依頼された範囲の比較と推奨を返し、委任された範囲で採否を判断する。
 パラメータだけの変更は `parameter-tuning`、予測の誤差診断は `error-analysis` を使う。
 
@@ -69,7 +69,7 @@ testの評価・再評価を依頼範囲に含む場合は、共通のデータ�
 ## 出力
 
 [レポート雛形](assets/report.md)でrunの `result.md` に比較結果をまとめる。
-委任時は割当runを返し、全体の履歴・state・`output.md` は全体進行担当が更新する。
+委任時は担当仮説と直下の調査を更新し、割当runを返す。Core・共有履歴・`output.md` は全体進行担当が更新する。
 単独実行では担当者が共通記録を更新し、複数runの結果を同じ雛形で `output.md` に統合する。
 執筆には[成果物の共通方針](../analyze/references/deliverables.md)を使い、次の5章で変更意図・比較結果・判断をつなぐ。
 

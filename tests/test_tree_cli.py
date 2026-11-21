@@ -1,4 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
+import json
 
 import pytest
 
@@ -212,3 +213,22 @@ def test_concurrent_tree_cli_updates_keep_both_references(tree_file):
         results = list(pool.map(main, [[*command, "a", "A.md"], [*command, "b", "B.md"]]))
     assert results == [0, 0]
     assert {ref["id"] for ref in il.load_tree(tree_file).get("R1").references} == {"a", "b"}
+
+
+def test_new_tree_and_read_only_hypothesis_status(tmp_path, capsys):
+    path = tmp_path / "tree.json"
+    init = ["tree", "init", str(path), "--core-id", "C", "--goal", "問い"]
+    assert main(init) == 0
+    assert capsys.readouterr().out.strip() == str(path)
+    assert main(["tree", "add-hypothesis", str(path), "H", "--core", "--hypothesis", "予想"]) == 0
+    before = path.read_bytes()
+    capsys.readouterr()
+    assert main(["tree", "status", str(path), "H"]) == 0
+    view = json.loads(capsys.readouterr().out)
+    assert view["tree_path"] == str(path)
+    assert view["core"] == {"id": "C", "goal": "問い"}
+    assert view["hypothesis"]["id"] == "H"
+    assert view["research_nodes"] == []
+    assert main(init) == 1
+    assert path.read_bytes() == before
+    assert list(tmp_path.rglob("*.json")) == [path]

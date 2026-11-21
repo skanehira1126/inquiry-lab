@@ -6,7 +6,7 @@ description: "モデルの誤差分析。予測と正解について、対象・
 # モデルの誤差分析
 
 分類・回帰・ランキングの予測を診断し、どの条件で何が起きているかを説明する。
-全体の進行は呼出元が担当し、依頼・run・履歴・stateには[分析先と履歴の共通手順](../analyze/references/history-recording.md)を使う。
+全体の進行は呼出元が担当し、依頼・run・履歴・treeには[分析先と履歴の共通手順](../analyze/references/history-recording.md)を使う。
 このSkillは計画した一括診断を報告して完了する。
 モデルの変更・採用比較は [modeling](../modeling/SKILL.md) へ渡す。
 
@@ -50,7 +50,7 @@ testの評価・再評価を依頼範囲に含む場合は、共通のデータ�
 ## 出力
 
 [レポート雛形](assets/report.md)でrunの `result.md` に診断結果をまとめる。
-委任時は割当runを返し、全体の履歴・state・`output.md` は全体進行担当が更新する。
+委任時は担当仮説と直下の調査を更新し、割当runを返す。Core・共有履歴・`output.md` は全体進行担当が更新する。
 単独実行では担当者が共通記録を更新し、同じ雛形で `output.md` に結果をまとめる。
 執筆には[成果物の共通方針](../analyze/references/deliverables.md)を使い、次の5章で全項目の結果と根拠を辿れるようにする。
 

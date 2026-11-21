@@ -4,6 +4,8 @@ from tempfile import TemporaryDirectory
 from typing import Literal
 from typing import get_args
 
+from filelock import FileLock
+
 from inquiry_lab.exceptions import DuplicateNodeIdError
 from inquiry_lab.exceptions import InvalidConnectionError
 from inquiry_lab.exceptions import InvalidSearchFilterError
@@ -20,6 +22,13 @@ from inquiry_lab.tree_map.node import TreeHypothesisChange
 from inquiry_lab.tree_map.node import TreeResearchChange
 
 
+def tree_lock(path: Path) -> FileLock:
+    # dump replaces the tree inode; all writers lock the same stable sibling.
+    if not path.parent.is_dir():
+        raise FileNotFoundError(f"Missing tree directory: {path.parent}")
+    return FileLock(path.with_name(f".{path.name}.lock"))
+
+
 BasicNodes = HypothesisNode | ResearchNode
 SearchType = Literal["hypothesis", "research"]
 
@@ -30,6 +39,13 @@ class InquiryTree:
         self.core_id = core_node.id
 
         self._nodes[core_node.id] = core_node
+
+    @property
+    def core(self) -> CoreNode:
+        node = self.get(self.core_id)
+        if not isinstance(node, CoreNode):
+            raise NodeTypeError(f"Node {self.core_id!r} must be CoreNode.")
+        return node
 
     def add(self, node: BasicNodes):
         if node.id in self._nodes:
@@ -66,19 +82,10 @@ class InquiryTree:
         research: TreeResearchChange | None = None,
     ):
         if core is not None:
-            core_node = self.get(self.core_id)
-            if isinstance(core_node, CoreNode):
-                core_node.update(core)
-            else:
-                raise NodeTypeError(f"Node {self.core_id!r} must be CoreNode.")
+            self.core.update(core)
 
         if hypothesis is not None:
-            node_id = hypothesis["id"]
-            hypothesis_node = self.get(node_id)
-            if isinstance(hypothesis_node, HypothesisNode):
-                hypothesis_node.update(hypothesis)
-            else:
-                raise NodeTypeError(f"Node {node_id!r} must be HypothesisNode.")
+            self.get_hypothesis(hypothesis["id"]).update(hypothesis)
 
         if research is not None:
             node_id = research["id"]
@@ -154,8 +161,31 @@ class InquiryTree:
             ancestors.append(node)
         return ancestors
 
+    def get_hypothesis(self, hypothesis_id: str) -> HypothesisNode:
+        node = self.get(hypothesis_id)
+        if not isinstance(node, HypothesisNode):
+            raise NodeTypeError(f"Node {hypothesis_id!r} must be HypothesisNode.")
+        return node
+
+    def status(self, file_path: str | Path, hypothesis_id: str) -> dict:
+        hypothesis = self.get_hypothesis(hypothesis_id)
+        return {
+            "tree_path": str(Path(file_path).resolve()),
+            "core": {"id": self.core.id, "goal": self.core.goal},
+            "hypothesis": hypothesis.model_dump(mode="json"),
+            "research_nodes": [
+                node.model_dump(mode="json", exclude={"parent"})
+                for node in self.search("research", None, children_of=hypothesis.id)
+            ],
+        }
+
     def dump(self, file_path: str | Path) -> None:
+        """Atomically save the tree."""
         destination = Path(file_path).resolve()
+        with tree_lock(destination):
+            self._dump_locked(destination)
+
+    def _dump_locked(self, destination: Path) -> None:
         if destination.exists() and not destination.is_file():
             raise OSError(f"Expected a regular file: {destination}")
 
@@ -187,8 +217,7 @@ class TreeWriter:
         }
 
     def dump_core(self) -> dict:
-        core = self.tree.get(self.tree.core_id)
-        return core.model_dump(mode=self.mode)
+        return self.tree.core.model_dump(mode=self.mode)
 
     def dump_nodes(self) -> list[dict]:
         nodes = []

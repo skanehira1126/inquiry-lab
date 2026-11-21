@@ -9,7 +9,7 @@ EDAは表形式・イベントと反復観測・予測準備の参照を組み�
 
 CLIは `init` で分析先と最初のrun、`run new` で追加runのテンプレートを展開し、
 `history` で作業履歴の記録とMarkdown出力を行います。
-`state update / show / context` は分析全体の現在状態を保存・表示し、SessionStart hookへ復元用の文脈を渡します。
+`tree` は共有する仮説・調査を保存し、`state` は作業者ごとの担当仮説を管理します。
 `data inspect / values` はCSV・TSV・Parquetの基本確認を行い、EDAで読む範囲・欠損・表示の省略を揃えます。
 `json inspect` はJSONの指定階層の直下を表示し、設定や分析結果を確認します。
 Python APIの `visualize` は、固定した見た目で分析用の図を描画・保存します。
@@ -30,7 +30,7 @@ codex plugin add inquiry-lab@inquiry-lab
 導入後は新しいタスクまたはセッションで利用します。
 プラグインとPython CLIは別々に導入します。プラグインはスキルを提供し、
 Pythonパッケージのインストールは行いません。
-現在のanalyzeスキルは、特定のCLIや保存方式を利用の前提にしていません。
+新規案件の状態管理には、以下の手順で導入した CLI の `tree` コマンドを使います。
 
 リポジトリ全体が一つのプラグインです。Notebook Workbenchと同じ、Codexで対応している
 `.codex-plugin/plugin.json` 形式を使用しています。
@@ -47,7 +47,7 @@ inquiry-lab/
 │   ├── modeling/
 │   │   ├── SKILL.md                # 学習・評価、広い仮説探索と深掘りによる改善
 │   │   ├── agents/openai.yaml
-│   │   ├── references/state.md    # 共通stateの利用、再開と一件ずつの委任
+│   │   ├── references/tree.md    # 共有treeを使った再開と仮説の委任
 │   │   ├── references/data-usage.md # データ区分、testへの進行条件と再評価
 │   │   └── assets/report.md
 │   ├── models-understanding/
@@ -102,7 +102,7 @@ EDAで使う見方の追加は、`eda` の参照文書と選択条件を改訂�
 現在のデータで学習・評価し、`models-understanding`で性格を把握して、広い仮説探索と深掘りを繰り返します。
 比較範囲が決まっている場合は、既存の結果を引き継いで対応する専門Skillを使い、その範囲の結果を返します。
 初期構成・粗い設定探索、仮説の作り方、行動選択と時間内での区切り方はSkillに定めています。
-状態管理はanalyzeの共通スキーマを使い、[modelingの状態管理](skills/modeling/references/state.md)で採用中モデル・今回の対象・実行情報を引き継ぎます。
+状態管理はanalyzeと共通のtreeを使い、[modelingの状態管理](skills/modeling/references/tree.md)で採用中モデル・今回の対象・実行情報を引き継ぎます。
 「`$inquiry-lab:modeling` を使って、現在のデータでモデルを作り、仮説の探索と深掘りを繰り返して改善して」と依頼できます。
 
 [models-understanding](skills/models-understanding/SKILL.md) は、構成・性能・入力の使われ方と過去の変更への反応から、モデルの性格を帰納的に捉えます。
@@ -149,7 +149,7 @@ MLflowやローカルに保存した結果は原本を参照し、判断に必�
 train・valid・pretest・testの役割、利用できる区分の選択、AVと開発側の裏付けに基づくtest評価・再評価を扱います。
 testは最終ホールドアウトで、必要な場合に開発開始前に確保します。4分割は必須ではありません。
 個別の比較・診断の完了条件は専門Skillが定め、全体の進行担当が継続・終了を判断します。
-委任された専門Skillはrunを返し、共有履歴・state・`output.md`は全体進行担当が更新します。
+委任された専門Skillは担当仮説と調査を更新してrunを返し、Core・共有履歴・`output.md`は全体進行担当が更新します。
 単独実行の出力先は各Skillの指定に従います。
 
 モデルのパラメータを調整する案件では、modelingが[チューニングSkill](skills/parameter-tuning/SKILL.md)を読みます。
@@ -278,7 +278,7 @@ analyses/sales-change/
 
 汎用テンプレート本文は英語、EDA用run雛形は日本語ですが、記入する言語は自由です。
 Notebook、Pythonスクリプト、`analysis.yaml`、`run.yaml` は生成しません。
-`state.json`は目的・終了条件を整理した後に`state update`で作成します。`init`では生成しません。
+分析の目的が決まったら、`tree init` で共有する tree を作成します。
 
 最初のrunをEDA用の構成で作る場合は、次のように指定します。
 
@@ -346,28 +346,23 @@ uv run inquiry-lab history render --workspace analyses/missing
 - 明示した依存関係があると、生成文書の冒頭にMermaidの図が出ます。線で結ばれた記録を表示し、各記録の詳細にも元のrunと依存元へのリンクを残します。CLIはMarkdownに `mermaid` コードブロックを書き、図の描画は対応するエディタやビューアが行います。
 - `render` は1回で、短い `作業履歴.md` と各記録の詳細 `history/NNNNNN.md` を生成します。履歴には依存図・現在地・作業順の要約を置き、詳細にはJSONの各項目を表示します。ローカルの参考リンクは出力先に合わせて調整します。訂正は正本のJSONを編集し、両方を再生成します。
 
-## 分析全体の状態とcompaction後の復元
+## 作業者の担当を記録して再開する
 
-`state.json`には全体の目標・終了条件と、現在の個別作業・次の行動を分けて残します。
-[入力例](skills/analyze/assets/state.json)を案件に合わせて記入し、全体を渡して更新します。
+全体進行担当は共有 tree に仮説を登録します。各作業者は、自分が仮説に着手した時点で state を作ります。
+以下は分析先から作業者 A が着手し、調査結果を確認する例です。
 
 ```bash
-inquiry-lab state update --workspace analyses/sales-change --input /tmp/analysis-state.json
-inquiry-lab state show --workspace analyses/sales-change
-inquiry-lab state context --workspace analyses/sales-change
+inquiry-lab tree init tree.json --core-id Core-001 --goal '売上予測が外れる条件を調べる'
+inquiry-lab tree add-hypothesis tree.json H1 --core --hypothesis '冬は誤差が大きい'
+inquiry-lab state start agents/A/state.json --tree tree.json --hypothesis H1
+inquiry-lab tree add-research tree.json R1 --parent H1 --question '同じ店舗で冬と春の誤差はどう違うか'
+inquiry-lab state show agents/A/state.json
 ```
 
-`update`は検査後にファイルを置き換え、更新日時を付けます。`--input`省略時は標準入力を読みます。
-`show`はネスト・件数・長さを省略せず、保存済みの状態全体をJSONで表示します。
-`context`はCodexの`SessionStart`（`compact`）へ渡すJSONを返す読み取り専用コマンドです。
-状態が読めない場合は復旧案内、履歴の最大番号と反映済み番号が異なる場合は照合の案内を返します。
-長いstateは本文を部分的に切り捨てず、保存先と`show`での確認を案内します。
-
-依頼文書は合意条件、historyは判断の経緯、runは実行根拠として残し、stateから参照します。
-更新するのはanalyzeまたはmodelingで全体を進行する担当者で、個別作業の開始前・判断後・条件変更後・中断時に保存します。
-CLIは状態遷移や終了を自動判定しません。同時更新は後の保存が優先されるため、更新者を一人にします。
-JSONの項目、再開時の照合、hookの設定例は[全体状態の手順](skills/analyze/references/state.md)を参照してください。
-hookは設定と信頼操作が必要です。プラグインやCLIの導入だけでは有効になりません。
+`show` は最新の tree から Core の目的、担当仮説と直下の全調査の結果・参照先を返します。
+担当を同じ tree 内の別の仮説に切り替えるときは `state update STATE --hypothesis ID`、
+結果を記録して終了するときは `state finish STATE` を使います。中断時は state を残して再開に使えます。
+保存形式と各操作の例は[作業者の現在地と共有 tree](skills/analyze/references/tree.md)にあります。
 
 ## CLIの動作
 
@@ -405,7 +400,7 @@ tree.dump("tree.json")
 仮説の現在の回答は `result` に記録します。調査では
 `question` への回答を `result` に、run や図表の参照先を `references` に置きます。
 Core の `evidence_items` には知見 `finding` と根拠の `node_ids` を組にして残せます。
-ワークスペースの再開用スナップショットは、別途 `state update` で保存します。
+担当者は着手時に `state start` で自分の現在地を保存します。
 
 ### CLIで仮説と調査を追加する
 

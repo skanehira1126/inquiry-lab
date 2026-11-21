@@ -7,9 +7,8 @@ from pathlib import Path
 from typing import Unpack
 from typing import get_args
 
-from filelock import FileLock
-
 from inquiry_lab.tree_map import load_tree
+from inquiry_lab.tree_map import tree as new_tree
 from inquiry_lab.tree_map.node import CoreChanges
 from inquiry_lab.tree_map.node import CoreNode
 from inquiry_lab.tree_map.node import CoreStatus
@@ -23,6 +22,7 @@ from inquiry_lab.tree_map.node import TreeHypothesisChange
 from inquiry_lab.tree_map.node import TreeResearchChange
 from inquiry_lab.tree_map.tree import InquiryTree
 from inquiry_lab.tree_map.tree import SearchType
+from inquiry_lab.tree_map.tree import tree_lock
 
 
 class TreeArgumentError(ValueError):
@@ -32,12 +32,25 @@ class TreeArgumentError(ValueError):
 @contextmanager
 def _edit_tree(path: Path) -> Generator[InquiryTree, None, None]:
     path = path.resolve(strict=True)
-    # Lock a stable sibling because dump() replaces the tree file itself.
-    with FileLock(path.with_name(f".{path.name}.lock")):
+    with tree_lock(path):
         tree = load_tree(path)
         yield tree
-        tree.dump(path)
+        tree._dump_locked(path)
     print(path)
+
+
+def cli_tree_init(path: Path, core_id: str, goal: str) -> None:
+    path = path.parent.resolve() / path.name
+    with tree_lock(path):
+        if path.is_symlink() or path.exists():
+            raise FileExistsError(f"Tree destination already exists: {path}")
+        new_tree(core_id, goal)._dump_locked(path)
+    print(path)
+
+
+def cli_tree_status(path: Path, hypothesis_id: str) -> None:
+    status = load_tree(path).status(path, hypothesis_id)
+    print(json.dumps(status, ensure_ascii=False, indent=2))
 
 
 def cli_add_hypothesis(
@@ -147,6 +160,15 @@ def cli_tree_ancestors(path: Path, node_id: str, as_json: bool) -> None:
 
 def register_tree_commands(tree: argparse.ArgumentParser) -> None:
     actions = tree.add_subparsers(required=True)
+    init = actions.add_parser("init", help="create a new tree with its core goal")
+    init.add_argument("path", type=Path)
+    init.add_argument("--core-id", required=True)
+    init.add_argument("--goal", required=True)
+    init.set_defaults(func=cli_tree_init)
+    status = actions.add_parser("status", help="show the assigned hypothesis and its research")
+    status.add_argument("path", type=Path, metavar="TREE")
+    status.add_argument("hypothesis_id", metavar="HYPOTHESIS_ID")
+    status.set_defaults(func=cli_tree_status)
     search = actions.add_parser("search", help="find hypothesis and research nodes")
     search.add_argument("path", type=Path, help="existing tree JSON file")
     search.add_argument("--type", dest="node_type", choices=get_args(SearchType))
