@@ -8,6 +8,8 @@ from inquiry_lab.data import DataArgumentError
 from inquiry_lab.data import inspect_data
 from inquiry_lab.data import list_data_values
 from inquiry_lab.data import render_data_text
+from inquiry_lab.exceptions import InvalidSearchFilterError
+from inquiry_lab.exceptions import NodeNotFoundError
 from inquiry_lab.exceptions import NodeTypeError
 from inquiry_lab.history import record_entry
 from inquiry_lab.history import render_history
@@ -91,7 +93,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     commands = parser.add_subparsers(required=True)
-    register_tree_commands(commands.add_parser("tree", help="add or update nodes in a saved tree"))
+    register_tree_commands(
+        commands.add_parser("tree", help="inspect and edit a saved inquiry tree")
+    )
     json_command = commands.add_parser("json", help="inspect JSON files (read-only)")
     json_actions = json_command.add_subparsers(required=True)
     json_inspect = json_actions.add_parser("inspect", help="show values at one JSON level")
@@ -176,8 +180,16 @@ def main(argv: list[str] | None = None) -> int:
     func = args.pop("func")
     try:
         func(**args)
-    except (DataArgumentError, JsonArgumentError, TreeArgumentError) as error:
+    except (
+        DataArgumentError,
+        JsonArgumentError,
+        TreeArgumentError,
+        InvalidSearchFilterError,
+    ) as error:
         parser.error(str(error))
+    except NodeNotFoundError as error:
+        print(f"inquiry-lab: Node {error.args[0]!r} was not found.", file=sys.stderr)
+        return 1
     except (OSError, ValueError, NodeTypeError) as error:
         print(f"inquiry-lab: {error}", file=sys.stderr)
         return 1

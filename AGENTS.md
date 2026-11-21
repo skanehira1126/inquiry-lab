@@ -7,7 +7,7 @@
 inquiry-labは、分析の進行を支援するCodexプラグインと、分析の問い・試行結果・統合レポートを
 記録するワークスペースのテンプレートを展開するPython CLI。
 分析にはPython、SQL、Notebookなど任意の実行手段を使える。
-コマンドは `inquiry-lab init`、`inquiry-lab run new`、`inquiry-lab history record`、`inquiry-lab history render`、`inquiry-lab data inspect`、`inquiry-lab data values`、`inquiry-lab json inspect`、`inquiry-lab state update / show / context`、`inquiry-lab tree add-hypothesis / add-research / update`。
+コマンドは `inquiry-lab init`、`inquiry-lab run new`、`inquiry-lab history record`、`inquiry-lab history render`、`inquiry-lab data inspect`、`inquiry-lab data values`、`inquiry-lab json inspect`、`inquiry-lab state update / show / context`、`inquiry-lab tree add-hypothesis / add-research / update / search / details / ancestors`。
 利用方法と生成物の構成は [README.md](README.md) を参照する。
 
 現行CLIはテンプレート展開、runの自動採番、試行・判断のJSON記録、作業履歴のMarkdown出力、全体stateの保存・復元を扱う。分析の実行、結果の採用・完了の判定、履歴sequenceの自動採番は管理しない。
@@ -51,6 +51,7 @@ CLIによる学習・探索の自動実行は未実装。
 - `src/inquiry_lab/cli.py`：引数解析とCLIハンドラー。
   `argparse` の `set_defaults(func=...)` で登録し、`func(**args)` で呼び出す構成を保つ。
 - `src/inquiry_lab/tree_map/cli.py`：既存 tree JSON の単一ノード追加・更新。filelock で CLI 間の読み込みから保存までを直列化し、操作に成功した場合に保存する。テストは `tests/test_tree_cli.py`。
+  読み取り専用の search・details・ancestors は仮説と調査の検索、1件の詳細、親から Core までの背景を表示する。検索範囲・出力のテストは `tests/test_tree_search.py`。
 - `src/inquiry_lab/history.py`：履歴JSONの検査・保存と、短い `作業履歴.md`・各ループの詳細 `history/NNNNNN.md` の生成。
 - `src/inquiry_lab/data.py`：単一ファイルの基本確認と値の全件集計。PyArrowでParquetを読み、CSV/TSVの文字列を保持する。
   `skills/eda/references/data-inspection.md` に結果の読み方と範囲を集約する。

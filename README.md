@@ -435,6 +435,26 @@ inquiry-lab tree update tree.json core --status completed --add-evidence F1 'ス
 Core は ID を省略します。Hypothesis と Research は `--result` を省略すると既存の結論を保持し、`--clear-result` で消去します。
 根拠の削除には `--delete-evidence ID` を使います。根拠・参照の追加と削除は、同じオプションを繰り返して複数件を指定できます。
 
+### CLIでノードを探して背景を読む
+
+`tree search` は既存の tree JSON から仮説・調査を探し、ID、種別、状態、親 ID、本文を1ノード1行で表示します。
+`--type hypothesis|research` と `--status` は任意です。状態名は大文字・小文字を区別し、種別を指定した場合はその種別で使える状態から選びます。
+
+```bash
+inquiry-lab tree search tree.json --type research --status Blocked
+inquiry-lab tree search tree.json --children-of H1
+inquiry-lab tree search tree.json --descendants-of H1 --status Blocked --json
+inquiry-lab tree details tree.json R1
+inquiry-lab tree ancestors tree.json R1
+```
+
+`--children-of` は直下の子、`--descendants-of` は全階層の子孫に検索範囲を限定します。指定したノード自身は範囲外です。
+どちらか一方を選べ、省略すると木全体の仮説・調査が対象になります。子孫は中間ノードの種別・状態にかかわらずたどります。
+
+`details` は Core を含め、指定 ID の全項目を種別付きの JSON オブジェクトで表示します。結果、制約、根拠や参照先を確認できます。
+`ancestors` は直上の親から Core までを順に表示します。`search` と `ancestors` の `--json` は各ノードの全項目を配列で返します。
+該当が0件なら正常終了し、一覧は「該当なし」、JSON は `[]` になります。
+
 ## Pythonからグラフを保存する
 
 可視化を使う分析環境へ、追加依存を含めてインストールします。CLIだけの利用では不要です。

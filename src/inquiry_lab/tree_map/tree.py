@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Literal
+from typing import get_args
 
 from inquiry_lab.exceptions import DuplicateNodeIdError
 from inquiry_lab.exceptions import InvalidConnectionError
@@ -12,12 +13,15 @@ from inquiry_lab.exceptions import ParentNotFoundError
 from inquiry_lab.tree_map.node import CoreChanges
 from inquiry_lab.tree_map.node import CoreNode
 from inquiry_lab.tree_map.node import HypothesisNode
+from inquiry_lab.tree_map.node import HypothesisStatus
 from inquiry_lab.tree_map.node import ResearchNode
+from inquiry_lab.tree_map.node import ResearchStatus
 from inquiry_lab.tree_map.node import TreeHypothesisChange
 from inquiry_lab.tree_map.node import TreeResearchChange
 
 
 BasicNodes = HypothesisNode | ResearchNode
+SearchType = Literal["hypothesis", "research"]
 
 
 class InquiryTree:
@@ -86,40 +90,60 @@ class InquiryTree:
 
     def search(
         self,
-        node_type: Literal["hypothesis", "research"],
+        node_type: SearchType | None,
         status: str | None = None,
+        *,
+        children_of: str | None = None,
+        descendants_of: str | None = None,
     ) -> list[BasicNodes]:
         if node_type == "hypothesis":
             node_class = HypothesisNode
-            valid_status = ("Todo", "Active", "Fixed", "Pruned", "Pending")
+            valid_status = get_args(HypothesisStatus)
         elif node_type == "research":
             node_class = ResearchNode
-            valid_status = ("Todo", "Active", "Running", "Done", "Blocked")
+            valid_status = get_args(ResearchStatus)
+        elif node_type is None:
+            node_class = BasicNodes
+            valid_status = (*get_args(HypothesisStatus), *get_args(ResearchStatus))
         else:
             raise InvalidSearchFilterError(
                 f"node_type must be hypothesis or research, not {node_type}"
             )
         if status is not None and status not in valid_status:
+            choices = ", ".join(dict.fromkeys(valid_status))
             raise InvalidSearchFilterError(
-                f"When node_type is '{node_type}', status must be {valid_status}, not {status}"
+                f"Invalid status {status!r}. Expected one of: {choices}"
             )
 
-        output = []
-        for _, node in self._nodes.items():
-            if not isinstance(node, node_class):
-                continue
-            if status is not None and node.status != status:
-                continue
-
-            output.append(node)
-
-        return output
+        if children_of is not None and descendants_of is not None:
+            raise InvalidSearchFilterError("children_of and descendants_of are mutually exclusive")
+        if children_of is not None:
+            candidates = self.children_of(children_of)
+        elif descendants_of is not None:
+            candidates = self.descendants_of(descendants_of)
+        else:
+            candidates = [n for n in self._nodes.values() if not isinstance(n, CoreNode)]
+        return [
+            n
+            for n in candidates
+            if isinstance(n, node_class) and (status is None or n.status == status)
+        ]
 
     def children_of(self, node_id: str) -> list[BasicNodes]:
         node = self.get(node_id)
         return [
             n for n in self._nodes.values() if not isinstance(n, CoreNode) and n.parent == node.id
         ]
+
+    def descendants_of(self, node_id: str) -> list[BasicNodes]:
+        reached = {self.get(node_id).id}
+        descendants = []
+        # add() registers parents before their children, including when loading a saved tree.
+        for node in self._nodes.values():
+            if not isinstance(node, CoreNode) and node.parent in reached:
+                reached.add(node.id)
+                descendants.append(node)
+        return descendants
 
     def ancestors_of(self, node_id: str) -> list[CoreNode | BasicNodes]:
         node = self.get(node_id)

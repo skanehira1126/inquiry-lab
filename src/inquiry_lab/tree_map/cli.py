@@ -1,15 +1,17 @@
 import argparse
 from collections.abc import Generator
+from collections.abc import Sequence
 from contextlib import contextmanager
+import json
 from pathlib import Path
 from typing import Unpack
 from typing import get_args
 
 from filelock import FileLock
 
-from inquiry_lab.exceptions import NodeNotFoundError
 from inquiry_lab.tree_map import load_tree
 from inquiry_lab.tree_map.node import CoreChanges
+from inquiry_lab.tree_map.node import CoreNode
 from inquiry_lab.tree_map.node import CoreStatus
 from inquiry_lab.tree_map.node import HypothesisChanges
 from inquiry_lab.tree_map.node import HypothesisNode
@@ -20,6 +22,7 @@ from inquiry_lab.tree_map.node import ResearchStatus
 from inquiry_lab.tree_map.node import TreeHypothesisChange
 from inquiry_lab.tree_map.node import TreeResearchChange
 from inquiry_lab.tree_map.tree import InquiryTree
+from inquiry_lab.tree_map.tree import SearchType
 
 
 class TreeArgumentError(ValueError):
@@ -66,10 +69,7 @@ def _save_update(
     if not (core or (hypothesis and len(hypothesis) > 1) or (research and len(research) > 1)):
         raise TreeArgumentError("specify at least one update option")
     with _edit_tree(path) as tree:
-        try:
-            tree.update(core=core, hypothesis=hypothesis, research=research)
-        except NodeNotFoundError as error:
-            raise ValueError(f"Node {error.args[0]!r} was not found.") from error
+        tree.update(core=core, hypothesis=hypothesis, research=research)
 
 
 def cli_update_core(
@@ -100,8 +100,75 @@ def cli_update_research(
     _save_update(path, research={"id": node_id, **changes})
 
 
+def _summary(node: CoreNode | HypothesisNode | ResearchNode) -> tuple[str, str, str, str, str]:
+    if isinstance(node, CoreNode):
+        return node.id, "core", node.status, "-", node.goal
+    if isinstance(node, HypothesisNode):
+        return node.id, "hypothesis", node.status, node.parent, node.hypothesis
+    return node.id, "research", node.status, node.parent, node.question
+
+
+def _node_record(node: CoreNode | HypothesisNode | ResearchNode) -> dict:
+    return {"type": _summary(node)[1], **node.model_dump(mode="json")}
+
+
+def _print_nodes(nodes: Sequence[CoreNode | HypothesisNode | ResearchNode], as_json: bool) -> None:
+    if as_json:
+        print(json.dumps([_node_record(node) for node in nodes], ensure_ascii=False, indent=2))
+    elif nodes:
+        print("ID\tTYPE\tSTATUS\tPARENT\tTEXT")
+        for node in nodes:
+            print("\t".join(" ".join(field.split()) for field in _summary(node)))
+    else:
+        print("該当なし")
+
+
+def cli_tree_search(
+    path: Path,
+    node_type: SearchType | None,
+    status: str | None,
+    children_of: str | None,
+    descendants_of: str | None,
+    as_json: bool,
+) -> None:
+    nodes = load_tree(path).search(
+        node_type, status, children_of=children_of, descendants_of=descendants_of
+    )
+    _print_nodes(nodes, as_json)
+
+
+def cli_tree_details(path: Path, node_id: str) -> None:
+    print(json.dumps(_node_record(load_tree(path).get(node_id)), ensure_ascii=False, indent=2))
+
+
+def cli_tree_ancestors(path: Path, node_id: str, as_json: bool) -> None:
+    _print_nodes(load_tree(path).ancestors_of(node_id), as_json)
+
+
 def register_tree_commands(tree: argparse.ArgumentParser) -> None:
     actions = tree.add_subparsers(required=True)
+    search = actions.add_parser("search", help="find hypothesis and research nodes")
+    search.add_argument("path", type=Path, help="existing tree JSON file")
+    search.add_argument("--type", dest="node_type", choices=get_args(SearchType))
+    search.add_argument("--status", help="exact, case-sensitive node status")
+    scope = search.add_mutually_exclusive_group()
+    scope.add_argument("--children-of", metavar="ID", help="search direct children")
+    scope.add_argument("--descendants-of", metavar="ID", help="search descendants at all depths")
+    search.add_argument("--json", dest="as_json", action="store_true", help="print complete nodes")
+    search.set_defaults(func=cli_tree_search)
+    details = actions.add_parser("details", help="show one complete node as JSON")
+    details.add_argument("path", type=Path)
+    details.add_argument("node_id", metavar="NODE_ID")
+    details.set_defaults(func=cli_tree_details)
+    ancestors = actions.add_parser(
+        "ancestors", help="list ancestors from immediate parent to core"
+    )
+    ancestors.add_argument("path", type=Path)
+    ancestors.add_argument("node_id", metavar="NODE_ID")
+    ancestors.add_argument(
+        "--json", dest="as_json", action="store_true", help="print complete nodes"
+    )
+    ancestors.set_defaults(func=cli_tree_ancestors)
     add_hypothesis = actions.add_parser("add-hypothesis", help="add a hypothesis to a saved tree")
     add_hypothesis.add_argument("path", type=Path, help="existing tree JSON file")
     add_hypothesis.add_argument("node_id", metavar="NODE_ID")
