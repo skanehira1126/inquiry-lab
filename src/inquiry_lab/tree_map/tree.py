@@ -82,6 +82,9 @@ class InquiryTree:
         research: TreeResearchChange | None = None,
     ):
         if core is not None:
+            for evidence in core.get("add_items", []):
+                for node_id in evidence.get("node_ids", []):
+                    self.get(node_id)
             self.core.update(core)
 
         if hypothesis is not None:
@@ -102,6 +105,7 @@ class InquiryTree:
         *,
         children_of: str | None = None,
         descendants_of: str | None = None,
+        include_pruned_branch: bool = False,
     ) -> list[BasicNodes]:
         if node_type == "hypothesis":
             node_class = HypothesisNode
@@ -130,11 +134,24 @@ class InquiryTree:
             candidates = self.descendants_of(descendants_of)
         else:
             candidates = [n for n in self._nodes.values() if not isinstance(n, CoreNode)]
+        excluded = set() if include_pruned_branch else self._pruned_branch_ids()
         return [
             n
             for n in candidates
-            if isinstance(n, node_class) and (status is None or n.status == status)
+            if n.id not in excluded
+            and isinstance(n, node_class)
+            and (status is None or n.status == status)
         ]
+
+    def _pruned_branch_ids(self) -> set[str]:
+        pruned = set()
+        # Parents are registered first, even when loading nodes from disk.
+        for node in self._nodes.values():
+            if isinstance(node, CoreNode):
+                continue
+            if node.status == "Pruned" or node.parent in pruned:
+                pruned.add(node.id)
+        return pruned
 
     def children_of(self, node_id: str) -> list[BasicNodes]:
         node = self.get(node_id)
@@ -175,7 +192,8 @@ class InquiryTree:
             "hypothesis": hypothesis.model_dump(mode="json"),
             "research_nodes": [
                 node.model_dump(mode="json", exclude={"parent"})
-                for node in self.search("research", None, children_of=hypothesis.id)
+                for node in self.children_of(hypothesis.id)
+                if isinstance(node, ResearchNode)
             ],
         }
 

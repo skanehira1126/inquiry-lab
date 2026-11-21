@@ -174,6 +174,10 @@ def test_tree_cli_updates_core_and_hypothesis(tree_file):
         (["research", "missing", "--status", "Done"], "missing"),
         (["hypothesis", "R1", "--clear-result"], "HypothesisNode"),
         (
+            ["core", "--status", "completed", "--add-evidence", "F1", "冬季に集中", "R1", "R999"],
+            "R999",
+        ),
+        (
             ["research", "R1", "--add-reference", "ref", "a", "--add-reference", "ref", "b"],
             "duplicate",
         ),

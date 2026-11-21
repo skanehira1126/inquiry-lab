@@ -69,7 +69,7 @@ testの評価・再評価を依頼範囲に含む場合は、共通のデータ�
 ## 出力
 
 [レポート雛形](assets/report.md)でrunの `result.md` に比較結果をまとめる。
-委任時は担当仮説と直下の調査を更新し、割当runを返す。Core・共有履歴・`output.md` は全体進行担当が更新する。
+委任時は[委任の単位](../analyze/references/tree.md#委任の単位)に従って tree を更新し、割当runを返す。Core・共有履歴・`output.md` は全体進行担当が更新する。
 単独実行では担当者が共通記録を更新し、複数runの結果を同じ雛形で `output.md` に統合する。
 執筆には[成果物の共通方針](../analyze/references/deliverables.md)を使い、次の5章で変更意図・比較結果・判断をつなぐ。
 

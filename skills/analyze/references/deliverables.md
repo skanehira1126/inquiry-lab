@@ -72,7 +72,7 @@ JSONの項目とCLI操作は[分析先と履歴の共通手順](history-recordin
 ## テーマ別の出力レポート
 
 各専門Skillの出力手順と `assets/report.md` を、総評を作る段階で参照する。
-委任された専門Skillは担当仮説と直下の調査を更新し、割当runに結果を返す。Core・共有履歴・`output.md`は全体進行担当が更新する。
+委任された専門Skillは[委任の単位](tree.md#委任の単位)に従って tree を更新し、割当runに結果を返す。Core・共有履歴・`output.md`は全体進行担当が更新する。
 単独実行の出力先は各Skillの指定に従う。
 EDAの1shotは、[依頼と返却の契約](../../eda/references/request.md)に従ってrun結果と成果物を返す。
 反復探索の統合レポートには、[eda-loopのレポート雛形](../../eda-loop/assets/report.md)を使い、各回の知見を統合して対応するrunへつなぐ。

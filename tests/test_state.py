@@ -55,6 +55,7 @@ def test_worker_lifecycle_reads_live_tree_and_keeps_workers_independent(tree, ca
         )
         == 0
     )
+    assert main(["tree", "update", str(tree), "hypothesis", "H1", "--status", "Pruned"]) == 0
     capsys.readouterr()
     tree_bytes = tree.read_bytes()
     assert a.read_bytes() == binding
@@ -65,6 +66,7 @@ def test_worker_lifecycle_reads_live_tree_and_keeps_workers_independent(tree, ca
     assert view["tree_path"] == str(tree)
     assert view["core"] == {"id": "C", "goal": "予測誤差を説明する"}
     assert view["hypothesis"]["id"] == "H1"
+    assert view["hypothesis"]["status"] == "Pruned"
     assert view["hypothesis"]["constraints"] == ["同じ店舗"]
     assert view["research_nodes"] == [
         {

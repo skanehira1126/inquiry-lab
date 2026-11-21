@@ -149,7 +149,7 @@ MLflowやローカルに保存した結果は原本を参照し、判断に必�
 train・valid・pretest・testの役割、利用できる区分の選択、AVと開発側の裏付けに基づくtest評価・再評価を扱います。
 testは最終ホールドアウトで、必要な場合に開発開始前に確保します。4分割は必須ではありません。
 個別の比較・診断の完了条件は専門Skillが定め、全体の進行担当が継続・終了を判断します。
-委任された専門Skillは担当仮説と調査を更新してrunを返し、Core・共有履歴・`output.md`は全体進行担当が更新します。
+専門Skillには調査または仮説を[委任](skills/analyze/references/tree.md#委任の単位)します。各作業者は割当runへ結果を返し、Core・共有履歴・`output.md`は全体進行担当が更新します。
 単独実行の出力先は各Skillの指定に従います。
 
 モデルのパラメータを調整する案件では、modelingが[チューニングSkill](skills/parameter-tuning/SKILL.md)を読みます。
@@ -428,6 +428,8 @@ inquiry-lab tree update tree.json core --status completed --add-evidence F1 'ス
 ```
 
 Core は ID を省略します。Hypothesis と Research は `--result` を省略すると既存の結論を保持し、`--clear-result` で消去します。
+`--add-evidence` に指定する根拠のノード ID は、すべて同じ tree に登録済みである必要があります。
+未登録の ID があれば、同時に指定した知見や状態を含めて更新全体がエラーになります。
 根拠の削除には `--delete-evidence ID` を使います。根拠・参照の追加と削除は、同じオプションを繰り返して複数件を指定できます。
 
 ### CLIでノードを探して背景を読む
@@ -439,12 +441,14 @@ Core は ID を省略します。Hypothesis と Research は `--result` を省�
 inquiry-lab tree search tree.json --type research --status Blocked
 inquiry-lab tree search tree.json --children-of H1
 inquiry-lab tree search tree.json --descendants-of H1 --status Blocked --json
+inquiry-lab tree search tree.json --include-pruned-branch --status Pruned
 inquiry-lab tree details tree.json R1
 inquiry-lab tree ancestors tree.json R1
 ```
 
 `--children-of` は直下の子、`--descendants-of` は全階層の子孫に検索範囲を限定します。指定したノード自身は範囲外です。
-どちらか一方を選べ、省略すると木全体の仮説・調査が対象になります。子孫は中間ノードの種別・状態にかかわらずたどります。
+どちらか一方を選べ、省略すると木全体から検索します。通常は `Pruned` の仮説自身と全子孫を除外します。
+見送った枝の中も検索するときは `--include-pruned-branch` を付けます。種別・状態・親の指定は、その検索範囲内で適用されます。
 
 `details` は Core を含め、指定 ID の全項目を種別付きの JSON オブジェクトで表示します。結果、制約、根拠や参照先を確認できます。
 `ancestors` は直上の親から Core までを順に表示します。`search` と `ancestors` の `--json` は各ノードの全項目を配列で返します。

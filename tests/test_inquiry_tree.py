@@ -114,6 +114,21 @@ def test_core_update_rejects_evidence_without_node_ids():
     assert core.evidence_items == []
 
 
+def test_tree_rejects_unknown_evidence_node_before_applying_core_changes():
+    tree = il.tree("C", "目的")
+    tree.add(HypothesisNode(id="H1", parent="C", hypothesis="季節差がある"))
+    findings = [
+        {"id": "F1", "finding": "冬の観測", "node_ids": ["H1"]},
+        {"id": "F2", "finding": "夏の観測", "node_ids": ["R999"]},
+    ]
+
+    with pytest.raises(NodeNotFoundError, match="R999"):
+        tree.update(core={"status": "completed", "add_items": findings})
+
+    assert tree.core.evidence_items == []
+    assert tree.core.status == "in_progress"
+
+
 def test_tree_updates_preserve_target_ids_and_replace_selected_references():
     tree = il.tree(core_id="C", goal="目的")
     hypothesis = HypothesisNode(id="H", parent="C", hypothesis="季節差がある")

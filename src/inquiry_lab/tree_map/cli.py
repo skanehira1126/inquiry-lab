@@ -143,9 +143,14 @@ def cli_tree_search(
     children_of: str | None,
     descendants_of: str | None,
     as_json: bool,
+    include_pruned_branch: bool = False,
 ) -> None:
     nodes = load_tree(path).search(
-        node_type, status, children_of=children_of, descendants_of=descendants_of
+        node_type,
+        status,
+        children_of=children_of,
+        descendants_of=descendants_of,
+        include_pruned_branch=include_pruned_branch,
     )
     _print_nodes(nodes, as_json)
 
@@ -176,6 +181,11 @@ def register_tree_commands(tree: argparse.ArgumentParser) -> None:
     scope = search.add_mutually_exclusive_group()
     scope.add_argument("--children-of", metavar="ID", help="search direct children")
     scope.add_argument("--descendants-of", metavar="ID", help="search descendants at all depths")
+    search.add_argument(
+        "--include-pruned-branch",
+        action="store_true",
+        help="include Pruned hypotheses and all their descendants",
+    )
     search.add_argument("--json", dest="as_json", action="store_true", help="print complete nodes")
     search.set_defaults(func=cli_tree_search)
     details = actions.add_parser("details", help="show one complete node as JSON")
@@ -231,7 +241,7 @@ def register_tree_commands(tree: argparse.ArgumentParser) -> None:
         nargs="+",
         action="append",
         metavar="VALUE",
-        help="append ID FINDING [NODE_ID ...] (repeatable)",
+        help="append ID FINDING [NODE_ID ...] using existing tree node IDs (repeatable)",
     )
     core.add_argument("--delete-evidence", dest="delete_item_ids", action="append", metavar="ID")
     core.set_defaults(func=cli_update_core)

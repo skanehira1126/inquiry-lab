@@ -100,6 +100,28 @@ def test_search_cli_selects_nodes_in_scope(tree_file, capsys, options, expected_
     assert tree_file.read_bytes() == original
 
 
+@pytest.mark.parametrize(
+    ("options", "visible", "including_pruned"),
+    [
+        ([], {"H3"}, {"H1", "H2", "H3", "R1", "R2"}),
+        (["--children-of", "H2"], set(), {"R2"}),
+        (["--descendants-of", "H1", "--type", "research", "--status", "Blocked"], set(), {"R2"}),
+    ],
+)
+def test_search_cli_excludes_pruned_branches(
+    tree_file, capsys, options, visible, including_pruned
+):
+    tree = il.load_tree(tree_file)
+    tree.update(hypothesis={"id": "H1", "status": "Pruned"})
+    tree.dump(tree_file)
+
+    command = ["tree", "search", str(tree_file), *options, "--json"]
+    assert main(command) == 0
+    assert {row["id"] for row in json.loads(capsys.readouterr().out)} == visible
+    assert main([*command, "--include-pruned-branch"]) == 0
+    assert {row["id"] for row in json.loads(capsys.readouterr().out)} == including_pruned
+
+
 def test_search_cli_prints_summary_or_no_matches(tree_file, capsys):
     command = ["tree", "search", str(tree_file)]
     assert main([*command, "--status", "Blocked"]) == 0

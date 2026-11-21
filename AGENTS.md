@@ -112,7 +112,7 @@ CLIによる学習・探索の自動実行は未実装。
   仮説を特徴量へ具体化する方法、候補集合の共同評価と表現の採用基準の正本。
 - `skills/error-analysis/SKILL.md`：計画した範囲の誤差を一括診断し、報告して終了する手順。
   `references/diagnostics.md`で変更前後の誤りを比較し、弱点の改善と新たな苦手領域・悪化を確認する。
-  各Skillはanalyzeの共通記録を使い、委任時はrunを返す。担当仮説と直下の調査は作業者が、Core・共有履歴・統合レポートは全体進行担当が更新する。
+  各Skillはanalyzeの共通記録を使い、委任時は[委任の単位](skills/analyze/references/tree.md#委任の単位)に応じて担当ノードを更新してrunを返す。Core・共有履歴・統合レポートは全体進行担当が更新する。
   テーマ追加では独立したSkill・雛形と、担当する入口の参照を更新する。
 - `pyproject.toml`：Python 3.12以降、Flitによる配布、pytestとRuffによる検証を定義する。
   基本の実行時依存はParquet対応のPyArrow。可視化用extraはmatplotlib・NumPy・Polars・scikit-learn。
