@@ -1,15 +1,18 @@
-import xml.etree.ElementTree as ET
 from itertools import pairwise
+import xml.etree.ElementTree as ET
 
 import matplotlib as mpl
+from matplotlib import image
+from matplotlib import pyplot
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 import numpy as np
 import polars as pl
 import pytest
-from matplotlib import image, pyplot
-from matplotlib.axes import Axes
-from matplotlib.figure import Figure
 
-from inquiry_lab.visualize.common import plot_count, plot_histogram, plot_scatter
+from inquiry_lab.visualize.common import plot_count
+from inquiry_lab.visualize.common import plot_histogram
+from inquiry_lab.visualize.common import plot_scatter
 
 
 @pytest.mark.parametrize("hue", [None, "group"])

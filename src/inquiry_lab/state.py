@@ -1,12 +1,74 @@
 """Persist an analysis snapshot and restore it as SessionStart context."""
 
+from datetime import UTC
+from datetime import datetime
 import json
-from datetime import UTC, datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from inquiry_lab.history import nonempty_line, read_entry
+from inquiry_lab.history import nonempty_line
+from inquiry_lab.history import read_entry
+from inquiry_lab.history import validate_references
 from inquiry_lab.json_parsing import parse_json
+
+
+def _validate_goal(value: dict) -> None:
+    if value["status"] not in ("in_progress", "completed", "stopped", "blocked"):
+        raise ValueError("status must be in_progress, completed, stopped, or blocked")
+    for field in ("goal", "current_conclusion", "next_action"):
+        if not nonempty_line(value[field]):
+            raise ValueError(f"{field} must be a nonempty single line")
+    for field in ("constraints", "blockers"):
+        if not isinstance(value[field], list) or not all(map(nonempty_line, value[field])):
+            raise ValueError(f"{field} must be a list of nonempty single-line strings")
+
+
+def _validate_completion_criteria(criteria: object) -> None:
+    if not isinstance(criteria, list) or not criteria:
+        raise ValueError("completion_criteria must be a nonempty list")
+    for criterion in criteria:
+        if not isinstance(criterion, dict) or criterion.keys() != {
+            "condition",
+            "status",
+            "evidence",
+        }:
+            raise ValueError("each completion criterion needs condition, status, and evidence")
+        if not nonempty_line(criterion["condition"]):
+            raise ValueError("criterion condition must be a nonempty single line")
+        if criterion["status"] not in ("met", "unmet", "unknown"):
+            raise ValueError("criterion status must be met, unmet, or unknown")
+        if not isinstance(criterion["evidence"], list) or not all(
+            map(nonempty_line, criterion["evidence"])
+        ):
+            raise ValueError("criterion evidence must be a list of nonempty single-line strings")
+
+
+def _validate_current_task(task: object) -> None:
+    if task is None:
+        return
+    if not isinstance(task, dict) or task.keys() != {
+        "goal",
+        "done_when",
+        "status",
+        "run",
+        "progress",
+    }:
+        raise ValueError("current_task needs goal, done_when, status, run, and progress")
+    for field in ("goal", "done_when", "progress"):
+        if not nonempty_line(task[field]):
+            raise ValueError(f"current_task.{field} must be a nonempty single line")
+    if task["status"] not in ("planned", "in_progress", "completed", "blocked"):
+        raise ValueError("current_task.status must be planned, in_progress, completed, or blocked")
+    if task["run"] is not None and not nonempty_line(task["run"]):
+        raise ValueError("current_task.run must be null or a nonempty single-line path")
+
+
+def _validate_update_time(value: dict) -> None:
+    if "updated_at" in value:
+        if not nonempty_line(value["updated_at"]):
+            raise ValueError("updated_at must be an ISO 8601 timestamp with timezone")
+        if datetime.fromisoformat(value["updated_at"]).utcoffset() is None:
+            raise ValueError("updated_at must include a timezone")
 
 
 def validate_state(value: object) -> dict:
@@ -31,69 +93,14 @@ def validate_state(value: object) -> dict:
         raise ValueError(f"unknown state fields: {', '.join(sorted(unknown))}")
     if type(value["schema_version"]) is not int or value["schema_version"] != 1:
         raise ValueError("schema_version must be 1")
-    if value["status"] not in ("in_progress", "completed", "stopped", "blocked"):
-        raise ValueError("status must be in_progress, completed, stopped, or blocked")
-    for field in ("goal", "current_conclusion", "next_action"):
-        if not nonempty_line(value[field]):
-            raise ValueError(f"{field} must be a nonempty single line")
-    for field in ("constraints", "blockers"):
-        if not isinstance(value[field], list) or not all(map(nonempty_line, value[field])):
-            raise ValueError(f"{field} must be a list of nonempty single-line strings")
-    criteria = value["completion_criteria"]
-    if not isinstance(criteria, list) or not criteria:
-        raise ValueError("completion_criteria must be a nonempty list")
-    for criterion in criteria:
-        if not isinstance(criterion, dict) or criterion.keys() != {
-            "condition",
-            "status",
-            "evidence",
-        }:
-            raise ValueError("each completion criterion needs condition, status, and evidence")
-        if not nonempty_line(criterion["condition"]):
-            raise ValueError("criterion condition must be a nonempty single line")
-        if criterion["status"] not in ("met", "unmet", "unknown"):
-            raise ValueError("criterion status must be met, unmet, or unknown")
-        if not isinstance(criterion["evidence"], list) or not all(
-            map(nonempty_line, criterion["evidence"])
-        ):
-            raise ValueError("criterion evidence must be a list of nonempty single-line strings")
-    task = value["current_task"]
-    if task is not None:
-        if not isinstance(task, dict) or task.keys() != {
-            "goal",
-            "done_when",
-            "status",
-            "run",
-            "progress",
-        }:
-            raise ValueError("current_task needs goal, done_when, status, run, and progress")
-        for field in ("goal", "done_when", "progress"):
-            if not nonempty_line(task[field]):
-                raise ValueError(f"current_task.{field} must be a nonempty single line")
-        if task["status"] not in ("planned", "in_progress", "completed", "blocked"):
-            raise ValueError(
-                "current_task.status must be planned, in_progress, completed, or blocked"
-            )
-        if task["run"] is not None and not nonempty_line(task["run"]):
-            raise ValueError("current_task.run must be null or a nonempty single-line path")
+    _validate_goal(value)
+    _validate_completion_criteria(value["completion_criteria"])
+    _validate_current_task(value["current_task"])
     sequence = value["history_sequence"]
     if type(sequence) is not int or not 0 <= sequence <= 999999:
         raise ValueError("history_sequence must be an integer from 0 to 999999")
-    references = value["references"]
-    if not isinstance(references, list):
-        raise ValueError("references must be a list")
-    for ref in references:
-        if (
-            not isinstance(ref, dict)
-            or ref.keys() != {"label", "target"}
-            or not all(map(nonempty_line, ref.values()))
-        ):
-            raise ValueError("each reference needs a single-line label and target")
-    if "updated_at" in value:
-        if not nonempty_line(value["updated_at"]):
-            raise ValueError("updated_at must be an ISO 8601 timestamp with timezone")
-        if datetime.fromisoformat(value["updated_at"]).utcoffset() is None:
-            raise ValueError("updated_at must include a timezone")
+    validate_references(value["references"])
+    _validate_update_time(value)
     return value
 
 

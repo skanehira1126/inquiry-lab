@@ -3,14 +3,14 @@
 # Adapted from Notebook Workbench data_ops.py (Apache-2.0), 2026-11-06.
 # Argument errors follow inquiry-lab's CLI contract; decoding errors are ValueError.
 
-import csv
-import json
-import math
 from collections import Counter
 from collections.abc import Iterator
 from contextlib import contextmanager
+import csv
 from datetime import date
 from decimal import Decimal
+import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -97,26 +97,32 @@ def _csv_rows(reader, names: list[str], selected: list[str], indices: list[int])
         yield {name: row[index] for name, index in zip(selected, indices, strict=True)}
 
 
+def _arrow_json_value(value: pa.Scalar) -> Any:
+    if not value.is_valid:
+        return None
+    if pa.types.is_timestamp(value.type):
+        return value.cast(pa.string()).as_py().replace(" ", "T", 1)
+    if pa.types.is_time(value.type):
+        return value.cast(pa.string()).as_py()
+    if isinstance(value, pa.DurationScalar):
+        return {"duration": value.value, "unit": value.type.unit}
+    if isinstance(value, pa.StructScalar):
+        return {field.name: _json_value(value[field.name]) for field in value.type}
+    if isinstance(value, pa.MapScalar):
+        pairs = value.values
+        assert pairs is not None  # Null scalars returned above.
+        return [[_json_value(pair[0]), _json_value(pair[1])] for pair in pairs]
+    if isinstance(value, (pa.ListScalar, pa.LargeListScalar, pa.FixedSizeListScalar)):
+        return [_json_value(item) for item in value]
+    if isinstance(value, pa.DictionaryScalar):
+        return _json_value(value.value)
+    return _json_value(value.as_py())
+
+
 def _json_value(value: Any) -> Any:
     """Preserve non-JSON scalar meaning without emitting invalid JSON numbers."""
     if isinstance(value, pa.Scalar):
-        if not value.is_valid:
-            return None
-        if pa.types.is_timestamp(value.type):
-            return value.cast(pa.string()).as_py().replace(" ", "T", 1)
-        if pa.types.is_time(value.type):
-            return value.cast(pa.string()).as_py()
-        if pa.types.is_duration(value.type):
-            return {"duration": value.value, "unit": value.type.unit}
-        if isinstance(value, pa.StructScalar):
-            return {field.name: _json_value(value[field.name]) for field in value.type}
-        if isinstance(value, pa.MapScalar):
-            return [[_json_value(pair[0]), _json_value(pair[1])] for pair in value.values]
-        if isinstance(value, (pa.ListScalar, pa.LargeListScalar, pa.FixedSizeListScalar)):
-            return [_json_value(item) for item in value.values]
-        if isinstance(value, pa.DictionaryScalar):
-            return _json_value(value.value)
-        return _json_value(value.as_py())
+        return _arrow_json_value(value)
     if isinstance(value, float) and not math.isfinite(value):
         return {"float": str(value)}
     if isinstance(value, date):

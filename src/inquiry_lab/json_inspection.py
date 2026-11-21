@@ -1,7 +1,7 @@
 """Read-only, shallow inspection of JSON documents."""
 
-import json
 from itertools import islice
+import json
 from pathlib import Path
 from typing import Any
 
@@ -21,6 +21,24 @@ def _display(value: Any) -> str:
     return text if len(text) <= 160 else text[:160] + "… [truncated]"
 
 
+def _select_path(value: Any, segments: list[str]) -> Any:
+    for segment in segments:
+        if isinstance(value, dict):
+            if segment not in value:
+                raise JsonArgumentError(f"JSON key not found: {segment!r}")
+            value = value[segment]
+        elif isinstance(value, list):
+            if not segment.isascii() or not segment.isdecimal():
+                raise JsonArgumentError(f"expected a non-negative array index: {segment!r}")
+            index = int(segment)
+            if index >= len(value):
+                raise JsonArgumentError(f"array index out of range: {segment}")
+            value = value[index]
+        else:
+            raise JsonArgumentError(f"cannot select {segment!r} from a scalar JSON value")
+    return value
+
+
 def inspect_json(path: Path, *, keys: list[str] | None = None, head: int = 20) -> str:
     """Show one level; repeated keys and dotted paths select successive children.
 
@@ -36,20 +54,7 @@ def inspect_json(path: Path, *, keys: list[str] | None = None, head: int = 20) -
 
     value = parse_json(path.read_text(encoding="utf-8-sig"))
 
-    for segment in segments:
-        if isinstance(value, dict):
-            if segment not in value:
-                raise JsonArgumentError(f"JSON key not found: {segment!r}")
-            value = value[segment]
-        elif isinstance(value, list):
-            if not segment.isascii() or not segment.isdecimal():
-                raise JsonArgumentError(f"expected a non-negative array index: {segment!r}")
-            index = int(segment)
-            if index >= len(value):
-                raise JsonArgumentError(f"array index out of range: {segment}")
-            value = value[index]
-        else:
-            raise JsonArgumentError(f"cannot select {segment!r} from a scalar JSON value")
+    value = _select_path(value, segments)
 
     if isinstance(value, dict):
         lines = [f"TYPE object; keys: {len(value)}"]

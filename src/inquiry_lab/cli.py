@@ -1,18 +1,26 @@
 import argparse
 import json
-import sys
 from pathlib import Path
+import sys
 
 from inquiry_lab import __version__
-from inquiry_lab.data import DataArgumentError, inspect_data, list_data_values, render_data_text
+from inquiry_lab.data import DataArgumentError
+from inquiry_lab.data import inspect_data
+from inquiry_lab.data import list_data_values
+from inquiry_lab.data import render_data_text
 from inquiry_lab.exceptions import NodeTypeError
-from inquiry_lab.history import record_entry, render_history
-from inquiry_lab.json_inspection import JsonArgumentError, inspect_json
+from inquiry_lab.history import record_entry
+from inquiry_lab.history import render_history
+from inquiry_lab.json_inspection import JsonArgumentError
+from inquiry_lab.json_inspection import inspect_json
 from inquiry_lab.json_parsing import parse_json
-from inquiry_lab.state import read_state, state_context, update_state
+from inquiry_lab.state import read_state
+from inquiry_lab.state import state_context
+from inquiry_lab.state import update_state
 from inquiry_lab.tree_map.cli import TreeArgumentError
 from inquiry_lab.tree_map.cli import register_tree_commands
-from inquiry_lab.workspace import create_run, initialize_workspace
+from inquiry_lab.workspace import create_run
+from inquiry_lab.workspace import initialize_workspace
 
 
 def cli_init(directory: Path, title: str, template: str) -> None:

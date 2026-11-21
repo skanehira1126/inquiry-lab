@@ -3,12 +3,13 @@
 from pathlib import Path
 
 import matplotlib as mpl
-import numpy as np
-import polars as pl
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
 from matplotlib.ticker import MaxNLocator
-from sklearn.metrics import auc, roc_curve
+import numpy as np
+import polars as pl
+from sklearn.metrics import auc
+from sklearn.metrics import roc_curve
 from sklearn.utils.multiclass import type_of_target
 
 
@@ -42,7 +43,8 @@ def plot_roc_curve(
     roc_auc = auc(fpr, tpr)
 
     # Reset caller styles locally so the same inputs retain the same presentation.
-    style = {key: value for key, value in mpl.rcParamsDefault.items() if key != "backend"}
+    style = dict(mpl.rcParamsDefault.items())
+    style.pop("backend", None)
     with mpl.rc_context(rc=style):
         figure = Figure(figsize=(6, 6), dpi=150, layout="constrained")
         FigureCanvasAgg(figure)
@@ -109,7 +111,8 @@ def plot_calibration_curve(
     np.divide(score_sums, counts, out=mean_score, where=nonempty)
     np.divide(positives, counts, out=positive_rate, where=nonempty)
 
-    style = {key: value for key, value in mpl.rcParamsDefault.items() if key != "backend"}
+    style = dict(mpl.rcParamsDefault.items())
+    style.pop("backend", None)
     with mpl.rc_context(rc=style):
         figure = Figure(figsize=(6, 6), dpi=150, layout="constrained")
         FigureCanvasAgg(figure)

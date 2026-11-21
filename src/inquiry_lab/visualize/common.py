@@ -3,11 +3,12 @@
 from pathlib import Path
 
 import matplotlib as mpl
-import numpy as np
-import polars as pl
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
-from matplotlib.ticker import MaxNLocator, PercentFormatter
+from matplotlib.ticker import MaxNLocator
+from matplotlib.ticker import PercentFormatter
+import numpy as np
+import polars as pl
 
 
 def plot_histogram(
@@ -40,7 +41,8 @@ def plot_histogram(
     groups = [np.asarray(frame.get_column(column).to_numpy(), dtype=float) for frame in frames]
 
     bins = np.histogram_bin_edges(values, bins="auto")
-    style = {key: value for key, value in mpl.rcParamsDefault.items() if key != "backend"}
+    style = dict(mpl.rcParamsDefault.items())
+    style.pop("backend", None)
     with mpl.rc_context(rc=style):
         figure = Figure(figsize=(6, 6), dpi=150, layout="constrained")
         FigureCanvasAgg(figure)
@@ -124,7 +126,8 @@ def plot_scatter(
     _numeric_values(df, y)
     groups, names = _plot_groups(df, hue)
 
-    style = {key: value for key, value in mpl.rcParamsDefault.items() if key != "backend"}
+    style = dict(mpl.rcParamsDefault.items())
+    style.pop("backend", None)
     with mpl.rc_context(rc=style):
         figure = Figure(figsize=(6, 6), dpi=150, layout="constrained")
         FigureCanvasAgg(figure)
@@ -192,35 +195,20 @@ def plot_count(
         if weights.null_count() or not weights.dtype.is_integer() or (weights < 0).any():
             raise ValueError("count column must contain non-negative integers with no nulls")
 
-    groups, _ = _plot_groups(df, hue)
-    group_counts = []
-    names = []
-    for group in groups:
-        if count is None:
-            data = group.select(category=pl.col(column)).group_by("category").agg(total=pl.len())
-        else:
-            data = group.select(category=pl.col(column), total=pl.col(count))
-        totals = {value: 0 for value in categories}
-        for value, weight in data.iter_rows():
-            totals[value] += weight
-        total = sum(totals.values())
-        if normalize and not total:
-            raise ValueError("each group must have a positive total count to normalize")
-        group_counts.append([value / total if normalize else value for value in totals.values()])
-        name = "All" if hue is None else str(group.get_column(hue)[0])
-        names.append(f"{name} (n = {total:,})")
+    group_counts, names = _category_counts(df, column, categories, hue, count, normalize)
 
-    style = {key: value for key, value in mpl.rcParamsDefault.items() if key != "backend"}
+    style = dict(mpl.rcParamsDefault.items())
+    style.pop("backend", None)
     with mpl.rc_context(rc=style):
         figure = Figure(figsize=(6, 6), dpi=150, layout="constrained")
         FigureCanvasAgg(figure)
         ax = figure.subplots()
-        palette = mpl.colormaps["tab10" if len(groups) <= 10 else "tab20"]
+        palette = mpl.colormaps["tab10" if len(names) <= 10 else "tab20"]
         positions = np.arange(len(categories))
-        height = 0.8 / len(groups)
+        height = 0.8 / len(names)
         for index, (values, name) in enumerate(zip(group_counts, names, strict=True)):
             ax.barh(
-                positions + (index - (len(groups) - 1) / 2) * height,
+                positions + (index - (len(names) - 1) / 2) * height,
                 values,
                 height=height,
                 color=palette(index),
@@ -241,11 +229,39 @@ def plot_count(
             ax.xaxis.set_major_locator(MaxNLocator(integer=True))
         ax.grid(visible=True, axis="x", color="#e5e7eb", linewidth=0.8)
         ax.set_axisbelow(True)
-        ax.legend(title=hue, loc="best", ncols=(len(groups) + 4) // 5, fontsize=8)
+        ax.legend(title=hue, loc="best", ncols=(len(names) + 4) // 5, fontsize=8)
         output.parent.mkdir(parents=True, exist_ok=True)
         figure.savefig(output, format=output.suffix[1:].lower(), dpi=150)
 
     return output
+
+
+def _category_counts(
+    df: pl.DataFrame,
+    column: str,
+    categories: list,
+    hue: str | None,
+    count: str | None,
+    normalize: bool,
+) -> tuple[list[list[float]], list[str]]:
+    groups, _ = _plot_groups(df, hue)
+    group_counts = []
+    names = []
+    for group in groups:
+        if count is None:
+            data = group.select(category=pl.col(column)).group_by("category").agg(total=pl.len())
+        else:
+            data = group.select(category=pl.col(column), total=pl.col(count))
+        totals = dict.fromkeys(categories, 0)
+        for value, weight in data.iter_rows():
+            totals[value] += weight
+        total = sum(totals.values())
+        if normalize and not total:
+            raise ValueError("each group must have a positive total count to normalize")
+        group_counts.append([value / total if normalize else value for value in totals.values()])
+        name = "All" if hue is None else str(group.get_column(hue)[0])
+        names.append(f"{name} (n = {total:,})")
+    return group_counts, names
 
 
 def _numeric_values(df: pl.DataFrame, column: str) -> np.ndarray:

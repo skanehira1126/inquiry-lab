@@ -2,7 +2,9 @@ import json
 import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from urllib.parse import quote, urlsplit
+from urllib.parse import quote
+from urllib.parse import urlsplit
+
 
 RUN_FIELDS = {
     "hypothesis": "仮説",
@@ -23,12 +25,19 @@ def nonempty_line(value: object) -> bool:
     )
 
 
-def validate_entry(entry: object) -> dict:
-    if not isinstance(entry, dict):
-        raise ValueError("history entry must be a JSON object")
-    if type(entry.get("sequence")) is not int or not 1 <= entry["sequence"] <= 999999:
-        raise ValueError("sequence must be an integer from 1 to 999999")
-    common = {"sequence", "kind", "current_state", "references", "depends_on", "title", "summary"}
+def validate_references(references: object) -> None:
+    if not isinstance(references, list):
+        raise ValueError("references must be a list")
+    for ref in references:
+        if (
+            not isinstance(ref, dict)
+            or ref.keys() != {"label", "target"}
+            or not all(map(nonempty_line, ref.values()))
+        ):
+            raise ValueError("each reference needs a single-line label and target")
+
+
+def _validate_history_metadata(entry: dict) -> None:
     parents = entry.get("depends_on", [])
     if not isinstance(parents, list) or any(
         type(parent) is not int or not 1 <= parent < entry["sequence"] for parent in parents
@@ -39,6 +48,10 @@ def validate_entry(entry: object) -> dict:
     for field in ("title", "summary"):
         if field in entry and not nonempty_line(entry[field]):
             raise ValueError(f"{field} must be a nonempty single line")
+
+
+def _entry_fields(entry: dict) -> dict[str, str]:
+    common = {"sequence", "kind", "current_state", "references", "depends_on", "title", "summary"}
     kind = entry.get("kind")
     if kind == "run":
         fields = RUN_FIELDS
@@ -55,22 +68,23 @@ def validate_entry(entry: object) -> dict:
         raise ValueError("kind must be run or decision")
     if unknown := entry.keys() - allowed:
         raise ValueError(f"unknown fields: {', '.join(sorted(unknown))}")
+    return fields
+
+
+def validate_entry(entry: object) -> dict:
+    if not isinstance(entry, dict):
+        raise ValueError("history entry must be a JSON object")
+    if type(entry.get("sequence")) is not int or not 1 <= entry["sequence"] <= 999999:
+        raise ValueError("sequence must be an integer from 1 to 999999")
+    _validate_history_metadata(entry)
+    fields = _entry_fields(entry)
     if not nonempty_line(entry.get("current_state")):
         raise ValueError("current_state must be a nonempty single line")
     for field in fields:
         items = entry.get(field)
         if not isinstance(items, list) or not items or not all(map(nonempty_line, items)):
             raise ValueError(f"{field} must be a nonempty list of single-line strings")
-    references = entry.get("references")
-    if not isinstance(references, list):
-        raise ValueError("references must be a list")
-    for ref in references:
-        if (
-            not isinstance(ref, dict)
-            or ref.keys() != {"label", "target"}
-            or not all(map(nonempty_line, ref.values()))
-        ):
-            raise ValueError("each reference needs a single-line label and target")
+    validate_references(entry.get("references"))
     return entry
 
 

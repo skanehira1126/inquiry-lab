@@ -1,16 +1,15 @@
 import xml.etree.ElementTree as ET
 
 import matplotlib as mpl
+from matplotlib import image
+from matplotlib import pyplot
+from matplotlib.figure import Figure
 import numpy as np
 import polars as pl
 import pytest
-from matplotlib import image, pyplot
-from matplotlib.figure import Figure
 
-from inquiry_lab.visualize.ml.classifier import (
-    plot_calibration_curve,
-    plot_roc_curve,
-)
+from inquiry_lab.visualize.ml.classifier import plot_calibration_curve
+from inquiry_lab.visualize.ml.classifier import plot_roc_curve
 
 
 @pytest.mark.parametrize(

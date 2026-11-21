@@ -1,8 +1,8 @@
-import os
-import shutil
 from datetime import date
 from importlib.resources import files
+import os
 from pathlib import Path
+import shutil
 from string import Template
 from urllib.parse import quote
 

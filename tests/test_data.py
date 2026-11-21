@@ -1,16 +1,18 @@
 # Adapted from Notebook Workbench test_data_ops.py (Apache-2.0), 2026-11-06.
 
 import csv
-import json
-from datetime import date, timedelta
+from datetime import date
+from datetime import timedelta
 from decimal import Decimal
+import json
 
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
 from inquiry_lab.cli import main
-from inquiry_lab.data import inspect_data, list_data_values
+from inquiry_lab.data import inspect_data
+from inquiry_lab.data import list_data_values
 
 
 @pytest.fixture(params=["csv", "tsv", "parquet"])

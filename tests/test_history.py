@@ -5,6 +5,7 @@ import pytest
 
 from inquiry_lab.cli import main
 
+
 EXAMPLES = Path(__file__).resolve().parents[1] / "docs/examples"
 
 
