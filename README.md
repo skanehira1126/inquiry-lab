@@ -407,6 +407,19 @@ tree.dump("tree.json")
 Core の `evidence_items` には知見 `finding` と根拠の `node_ids` を組にして残せます。
 ワークスペースの再開用スナップショットは、別途 `state update` で保存します。
 
+### CLIで仮説と調査を追加する
+
+既存の tree JSON に1回のコマンドで1ノードを追加します。新しいノードの ID は利用者が指定し、初期状態は `Todo` です。
+
+```bash
+inquiry-lab tree add-hypothesis tree.json H2 --core --hypothesis '会場ごとに傾向が異なる'
+inquiry-lab tree add-hypothesis tree.json H3 --parent H2 --hypothesis '冬季は会場差が大きい' --constraint '同じ期間で比較する'
+inquiry-lab tree add-research tree.json R2 --parent H3 --question '冬季の会場別の差はどれくらいか？'
+```
+
+仮説の親は `--core`（Core 直下）か `--parent ID` のどちらか一方を指定します。
+調査には親仮説の `--parent ID` が必須です。仮説の制約は `--constraint` を繰り返して指定できます。
+
 ### CLIでノードを更新する
 
 `inquiry-lab tree update` は既存の tree JSON を読み込み、指定した1ノードの更新が成功すると同じファイルに保存し、絶対パスを表示します。

@@ -91,7 +91,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     commands = parser.add_subparsers(required=True)
-    register_tree_commands(commands.add_parser("tree", help="update a saved inquiry tree"))
+    register_tree_commands(commands.add_parser("tree", help="add or update nodes in a saved tree"))
     json_command = commands.add_parser("json", help="inspect JSON files (read-only)")
     json_actions = json_command.add_subparsers(required=True)
     json_inspect = json_actions.add_parser("inspect", help="show values at one JSON level")

@@ -18,6 +18,87 @@ def tree_file(tmp_path):
     return path
 
 
+def test_tree_cli_adds_a_branch_to_an_existing_tree(tree_file, capsys):
+    add = ["tree", "add-hypothesis", str(tree_file)]
+    assert main([*add, "H2", "--core", "--hypothesis", "季節差がある"]) == 0
+    assert (
+        main(
+            [
+                *add,
+                "H3",
+                "--parent",
+                "H2",
+                "--hypothesis",
+                "冬に偏る",
+                "--constraint",
+                "同じ期間",
+                "--constraint",
+                "同じ地域",
+            ]
+        )
+        == 0
+    )
+    assert (
+        main(
+            [
+                "tree",
+                "add-research",
+                str(tree_file),
+                "R2",
+                "--parent",
+                "H3",
+                "--question",
+                "月別の誤差は？",
+            ]
+        )
+        == 0
+    )
+    tree = il.load_tree(tree_file)
+    assert tree.get("H2") == HypothesisNode(id="H2", parent="C", hypothesis="季節差がある")
+    assert tree.get("H3") == HypothesisNode(
+        id="H3", parent="H2", hypothesis="冬に偏る", constraints=["同じ期間", "同じ地域"]
+    )
+    assert tree.get("R2") == ResearchNode(id="R2", parent="H3", question="月別の誤差は？")
+    output = capsys.readouterr()
+    assert output.out.splitlines() == [str(tree_file)] * 3
+    assert output.err == ""
+
+
+@pytest.mark.parametrize(
+    ("command", "args"),
+    [
+        ("add-hypothesis", ["H2", "--hypothesis", "仮説"]),
+        ("add-hypothesis", ["H2", "--hypothesis", "仮説", "--parent", "H1", "--core"]),
+        ("add-research", ["R2", "--question", "問い", "--core"]),
+        ("add-research", ["R2", "--question", "問い"]),
+    ],
+)
+def test_tree_add_requires_one_valid_parent_option(tree_file, command, args):
+    original = tree_file.read_bytes()
+    with pytest.raises(SystemExit) as error:
+        main(["tree", command, str(tree_file), *args])
+    assert error.value.code == 2
+    assert tree_file.read_bytes() == original
+
+
+@pytest.mark.parametrize(
+    ("command", "args", "detail"),
+    [
+        ("add-hypothesis", ["H1", "--core", "--hypothesis", "重複"], "H1"),
+        ("add-hypothesis", ["H2", "--parent", "missing", "--hypothesis", "仮説"], "missing"),
+        ("add-hypothesis", ["H2", "--parent", "R1", "--hypothesis", "仮説"], "R1"),
+        ("add-research", ["R2", "--parent", "C", "--question", "問い"], "C"),
+    ],
+)
+def test_tree_add_rejects_invalid_nodes_before_saving(tree_file, capsys, command, args, detail):
+    original = tree_file.read_bytes()
+    assert main(["tree", command, str(tree_file), *args]) == 1
+    output = capsys.readouterr()
+    assert detail in output.err
+    assert output.out == ""
+    assert tree_file.read_bytes() == original
+
+
 def test_tree_cli_updates_research_fields_and_references(tree_file, capsys):
     command = ["tree", "update", str(tree_file), "research", "R1"]
     assert main([*command, "--status", "Running"]) == 0
