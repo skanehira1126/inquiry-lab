@@ -6,6 +6,10 @@ class NodeNotFoundError(KeyError):
     """The requested ID does not identify a node in this tree."""
 
 
+class NodeTypeError(TypeError):
+    """The requested node has a different type from the update target."""
+
+
 class InvalidTreeFormatError(ValueError):
     """A decoded JSON document does not match the saved tree format."""
 

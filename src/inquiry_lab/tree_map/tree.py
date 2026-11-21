@@ -7,6 +7,7 @@ from inquiry_lab.exceptions import DuplicateNodeIdError
 from inquiry_lab.exceptions import InvalidConnectionError
 from inquiry_lab.exceptions import InvalidSearchFilterError
 from inquiry_lab.exceptions import NodeNotFoundError
+from inquiry_lab.exceptions import NodeTypeError
 from inquiry_lab.exceptions import ParentNotFoundError
 from inquiry_lab.tree_map.node import CoreChanges
 from inquiry_lab.tree_map.node import CoreNode
@@ -65,7 +66,7 @@ class InquiryTree:
             if isinstance(core_node, CoreNode):
                 core_node.update(core)
             else:
-                raise TypeError(f"id '{self.core_id} must be CoreNode.")
+                raise NodeTypeError(f"Node {self.core_id!r} must be CoreNode.")
 
         if hypothesis is not None:
             node_id = hypothesis["id"]
@@ -73,7 +74,7 @@ class InquiryTree:
             if isinstance(hypothesis_node, HypothesisNode):
                 hypothesis_node.update(hypothesis)
             else:
-                raise TypeError(f"id '{node_id} must be HypothesisNode.")
+                raise NodeTypeError(f"Node {node_id!r} must be HypothesisNode.")
 
         if research is not None:
             node_id = research["id"]
@@ -81,7 +82,7 @@ class InquiryTree:
             if isinstance(research_node, ResearchNode):
                 research_node.update(research)
             else:
-                raise TypeError(f"id '{node_id} must be ResearchNode.")
+                raise NodeTypeError(f"Node {node_id!r} must be ResearchNode.")
 
     def search(
         self,

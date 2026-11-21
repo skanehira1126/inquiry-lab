@@ -386,25 +386,41 @@ hookは設定と信頼操作が必要です。プラグインやCLIの導入だ�
 仮説の子には仮説と調査を置けます。調査は葉になります。
 
 ```python
+import inquiry_lab as il
 from inquiry_lab.tree_map import HypothesisNode, ResearchNode
-from inquiry_lab.tree_map.tree import InquiryTree
 
-tree = InquiryTree("Core-001", "着順の予測に役立つ要因を調べる")
+tree = il.tree("Core-001", "着順の予測に役立つ要因を調べる")
 tree.add(HypothesisNode(id="H1", parent="Core-001", hypothesis="スタート力が着順に影響する"))
 tree.add(ResearchNode(id="R1", parent="H1", question="枠番別でもスタート力と着順は関係するか？"))
 
 assert tree.get("R1").parent == "H1"
 assert [node.id for node in tree.children_of("H1")] == ["R1"]
 assert [node.id for node in tree.ancestors_of("R1")] == ["H1", "Core-001"]
+tree.dump("tree.json")
 ```
 
 `children_of` は直下の子を登録順に、`ancestors_of` は直上の親から Core までを順に返します。
 葉の子や Core の祖先は空リストです。未登録IDの検索は `KeyError` になります。
 
-仮説の現在の回答は `result`、回答の変化は `history` に記録します。調査では
+仮説の現在の回答は `result` に記録します。調査では
 `question` への回答を `result` に、run や図表の参照先を `references` に置きます。
 Core の `evidence_items` には知見 `finding` と根拠の `node_ids` を組にして残せます。
 ワークスペースの再開用スナップショットは、別途 `state update` で保存します。
+
+### CLIでノードを更新する
+
+`inquiry-lab tree update` は既存の tree JSON を読み込み、指定した1ノードの更新が成功すると同じファイルに保存し、絶対パスを表示します。
+
+```bash
+inquiry-lab tree update tree.json research R1 --status Running
+inquiry-lab tree update tree.json research R1 --status Done --result '枠番別でも関係が見られた' --add-reference ref1 runs/001/result.md
+inquiry-lab tree update tree.json research R1 --delete-reference ref1
+inquiry-lab tree update tree.json hypothesis H1 --clear-result
+inquiry-lab tree update tree.json core --status completed --add-evidence F1 'スタート力と着順に関係がある' H1 R1
+```
+
+Core は ID を省略します。Hypothesis と Research は `--result` を省略すると既存の結論を保持し、`--clear-result` で消去します。
+根拠の削除には `--delete-evidence ID` を使います。根拠・参照の追加と削除は、同じオプションを繰り返して複数件を指定できます。
 
 ## Pythonからグラフを保存する
 

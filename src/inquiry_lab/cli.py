@@ -5,10 +5,13 @@ from pathlib import Path
 
 from inquiry_lab import __version__
 from inquiry_lab.data import DataArgumentError, inspect_data, list_data_values, render_data_text
+from inquiry_lab.exceptions import NodeTypeError
 from inquiry_lab.history import record_entry, render_history
 from inquiry_lab.json_inspection import JsonArgumentError, inspect_json
 from inquiry_lab.json_parsing import parse_json
 from inquiry_lab.state import read_state, state_context, update_state
+from inquiry_lab.tree_map.cli import TreeArgumentError
+from inquiry_lab.tree_map.cli import register_tree_commands
 from inquiry_lab.workspace import create_run, initialize_workspace
 
 
@@ -80,6 +83,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     commands = parser.add_subparsers(required=True)
+    register_tree_commands(commands.add_parser("tree", help="update a saved inquiry tree"))
     json_command = commands.add_parser("json", help="inspect JSON files (read-only)")
     json_actions = json_command.add_subparsers(required=True)
     json_inspect = json_actions.add_parser("inspect", help="show values at one JSON level")
@@ -164,9 +168,9 @@ def main(argv: list[str] | None = None) -> int:
     func = args.pop("func")
     try:
         func(**args)
-    except (DataArgumentError, JsonArgumentError) as error:
+    except (DataArgumentError, JsonArgumentError, TreeArgumentError) as error:
         parser.error(str(error))
-    except (OSError, ValueError) as error:
+    except (OSError, ValueError, NodeTypeError) as error:
         print(f"inquiry-lab: {error}", file=sys.stderr)
         return 1
     return 0

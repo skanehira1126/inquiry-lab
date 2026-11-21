@@ -3,7 +3,7 @@ revision = 3
 requires-python = ">=3.12"
 
 [options]
-exclude-newer = "2026-11-09T14:59:20.790113Z"
+exclude-newer = "2026-11-14T08:51:44.232659Z"
 exclude-newer-span = "P1W"
 
 [[package]]
@@ -225,6 +225,7 @@ wheels = [
 name = "inquiry-lab"
 source = { editable = "." }
 dependencies = [
+    { name = "filelock" },
     { name = "pyarrow" },
     { name = "pydantic" },
 ]
@@ -248,6 +249,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "filelock", specifier = ">=3.13" },
     { name = "matplotlib", marker = "extra == 'visualize'", specifier = ">=3.10" },
     { name = "numpy", marker = "extra == 'visualize'", specifier = ">=1.26" },
     { name = "polars", marker = "extra == 'visualize'", specifier = ">=1" },

@@ -7,6 +7,11 @@ from pydantic import ConfigDict
 from pydantic import Field
 
 
+CoreStatus = Literal["in_progress", "completed", "stopped", "blocked"]
+HypothesisStatus = Literal["Todo", "Active", "Fixed", "Pruned", "Pending"]
+ResearchStatus = Literal["Todo", "Active", "Running", "Done", "Blocked"]
+
+
 class Evidence(TypedDict):
     id: str
     finding: str
@@ -15,7 +20,7 @@ class Evidence(TypedDict):
 
 class CoreChanges(TypedDict, total=False):
     add_items: list[Evidence]
-    status: Literal["in_progress", "completed", "stopped", "blocked"]
+    status: CoreStatus
     delete_item_ids: list[str]
 
 
@@ -25,7 +30,7 @@ class CoreNode(BaseModel):
     evidence_items: list[Evidence] = Field(
         default_factory=list, description="goalを支持する結果群"
     )
-    status: Literal["in_progress", "completed", "stopped", "blocked"] = Field(
+    status: CoreStatus = Field(
         default="in_progress", description="goalテーマに対する分析取り組みの状態"
     )
 
@@ -43,7 +48,7 @@ class CoreNode(BaseModel):
 
     def update_status(
         self,
-        status: Literal["in_progress", "completed", "stopped", "blocked"],
+        status: CoreStatus,
     ):
         self.status = status
 
@@ -66,7 +71,7 @@ class CoreNode(BaseModel):
 
 class HypothesisChanges(TypedDict, total=False):
     result: str | None
-    status: Literal["Todo", "Active", "Fixed", "Pruned", "Pending"]
+    status: HypothesisStatus
 
 
 class TreeHypothesisChange(HypothesisChanges):
@@ -89,9 +94,7 @@ class HypothesisNode(BaseModel):
         default_factory=list, description="この仮説の調査に適用する制約"
     )
     result: str | None = Field(None, description="仮説に対する結論")
-    status: Literal["Todo", "Active", "Fixed", "Pruned", "Pending"] = Field(
-        "Todo", description="このNodeの状態"
-    )
+    status: HypothesisStatus = Field("Todo", description="このNodeの状態")
     model_config = ConfigDict(validate_assignment=True)
 
     def update(self, content: HypothesisChanges):
@@ -109,7 +112,7 @@ class Reference(TypedDict):
 
 class ResearchChanges(TypedDict, total=False):
     result: str | None
-    status: Literal["Todo", "Active", "Running", "Done", "Blocked"]
+    status: ResearchStatus
     add_items: list[Reference]
     delete_item_ids: list[str]
 
@@ -123,9 +126,7 @@ class ResearchNode(BaseModel):
     parent: str = Field(..., description="この調査Nodeを生成した仮説NodeのID")
     question: str = Field(..., description="この調査Nodeの問")
     result: str | None = Field(None, description="questionに対する結論")
-    status: Literal["Todo", "Active", "Running", "Done", "Blocked"] = Field(
-        "Todo", description="このNodeの状態"
-    )
+    status: ResearchStatus = Field("Todo", description="このNodeの状態")
     references: list[Reference] = Field(
         default_factory=list, description="この結果を参照するための情報参照先"
     )
