@@ -44,8 +44,8 @@ CLIによる学習・探索の自動実行は未実装。
 ## 実装の入口と開発方針
 
 - `.codex-plugin/plugin.json`：リポジトリ直下をプラグインとし、`./skills/` を参照する。
-- `.agents/skills/create-analysis-template/SKILL.md`：分析テンプレートを作成・改訂するリポジトリ開発用Skill。
-  `skills/<テーマ名>/` に独立したSkillと雛形を追加し、担当する入口から参照する。
+- [create-analysis-template](.agents/skills/create-analysis-template/SKILL.md) は、analyze・EDA などの分析手順と雛形を保守するリポジトリ開発用 Skill。
+- [create-modeling-template](.agents/skills/create-modeling-template/SKILL.md) は、modeling とモデル系専門 Skill の手順・参照文書・レポート雛形を保守するリポジトリ開発用 Skill。
 - `.agents/plugins/marketplace.json`：`source.path: "./"` で同プラグインを公開する。
   プラグインの導入とPython CLIの導入を区別し、不要なMCPやhookを追加しない。
 - `src/inquiry_lab/cli.py`：引数解析とCLIハンドラー。

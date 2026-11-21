@@ -477,10 +477,13 @@ Polars DataFrameを受け取り、固定した見た目の図を保存します�
 
 ## 開発
 
-このリポジトリで「モデル評価用の分析テンプレートを作りたい」などと依頼すると、開発用の
-[create-analysis-template](.agents/skills/create-analysis-template/SKILL.md) が自動選択の対象になります。
+このリポジトリで分析手順やレポート雛形を保守するときは、変更するテーマに応じて開発用 Skill を使います。
+
+- 「EDA の観察結果をまとめる雛形を見直したい」など、分析の進行・探索に関する変更は [create-analysis-template](.agents/skills/create-analysis-template/SKILL.md) が扱います。
+- 「特徴量候補を見送った根拠を比較レポートに残したい」など、モデルの改善・比較・診断に関する変更は [create-modeling-template](.agents/skills/create-modeling-template/SKILL.md) が扱います。
+
 目的、入力、比較手順、終了条件を `skills/<テーマ名>/SKILL.md` にまとめ、
-出力レポートの雛形を `assets/report.md`、必要な詳細を `references/` に置きます。
+出力レポートの雛形を `assets/`、必要な詳細を `references/` に置きます。
 雛形は見出しと最低限の項目に絞り、執筆指示はSkillの出力節や参照文書へまとめます。
 専門Skillの自動選択を無効にし、担当する入口から参照します。入口のanalyze・modelingは自動選択を有効にします。
 繰り返し使う計算があれば、そのSkillの `scripts/` に同梱します。
