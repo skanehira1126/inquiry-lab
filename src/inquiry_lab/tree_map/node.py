@@ -1,11 +1,22 @@
-from typing import Literal, TypedDict
+from typing import Literal
+from typing import Required
+from typing import TypedDict
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
+from pydantic import ConfigDict
+from pydantic import Field
 
 
 class Evidence(TypedDict):
+    id: str
     finding: str
     node_ids: list[str]
+
+
+class CoreChanges(TypedDict, total=False):
+    add_items: list[Evidence]
+    status: Literal["in_progress", "completed", "stopped", "blocked"]
+    delete_item_ids: list[str]
 
 
 class CoreNode(BaseModel):
@@ -17,6 +28,49 @@ class CoreNode(BaseModel):
     status: Literal["in_progress", "completed", "stopped", "blocked"] = Field(
         default="in_progress", description="goalテーマに対する分析取り組みの状態"
     )
+
+    model_config = ConfigDict(validate_assignment=True)
+
+    def update(self, content: CoreChanges):
+        if add_items := content.get("add_items", None):
+            self.add_evidence(add_items)
+
+        if "status" in content:
+            self.update_status(content["status"])
+
+        if delete_item_ids := content.get("delete_item_ids", None):
+            self.delete_evidence(delete_item_ids)
+
+    def update_status(
+        self,
+        status: Literal["in_progress", "completed", "stopped", "blocked"],
+    ):
+        self.status = status
+
+    def add_evidence(self, add_items: list[Evidence]):
+        id_list = [item["id"] for item in add_items]
+        if len(id_list) != len(list(set(id_list))):
+            raise ValueError("add_items contains duplicate evidence IDs")
+
+        for evidence in add_items:
+            if evidence["id"] in [e["id"] for e in self.evidence_items]:
+                raise ValueError(f"id '{evidence['id']}' already exists.")
+
+        self.evidence_items = [*self.evidence_items, *add_items]
+
+    def delete_evidence(self, evidence_ids: list[str]):
+        self.evidence_items = [
+            evidence for evidence in self.evidence_items if evidence["id"] not in evidence_ids
+        ]
+
+
+class HypothesisChanges(TypedDict, total=False):
+    result: str | None
+    status: Literal["Todo", "Active", "Fixed", "Pruned", "Pending"]
+
+
+class TreeHypothesisChange(HypothesisChanges):
+    id: Required[str]
 
 
 class HypothesisNode(BaseModel):
@@ -31,11 +85,37 @@ class HypothesisNode(BaseModel):
     id: str = Field(..., description="仮説のNode ID")
     parent: str = Field(..., description="親のNode ID")
     hypothesis: str = Field(..., description="このNodeが担当する仮説")
+    constraints: list[str] = Field(
+        default_factory=list, description="この仮説の調査に適用する制約"
+    )
     result: str | None = Field(None, description="仮説に対する結論")
-    status: Literal["Todo", "Active", "Fixed", "Pruned"] = Field(
+    status: Literal["Todo", "Active", "Fixed", "Pruned", "Pending"] = Field(
         "Todo", description="このNodeの状態"
     )
-    history: list[str] = Field(default_factory=list, description="結論の更新履歴")
+    model_config = ConfigDict(validate_assignment=True)
+
+    def update(self, content: HypothesisChanges):
+        if "result" in content:
+            self.result = content["result"]
+
+        if "status" in content:
+            self.status = content["status"]
+
+
+class Reference(TypedDict):
+    id: str
+    content: str
+
+
+class ResearchChanges(TypedDict, total=False):
+    result: str | None
+    status: Literal["Todo", "Active", "Running", "Done", "Blocked"]
+    add_items: list[Reference]
+    delete_item_ids: list[str]
+
+
+class TreeResearchChange(ResearchChanges):
+    id: Required[str]
 
 
 class ResearchNode(BaseModel):
@@ -43,9 +123,37 @@ class ResearchNode(BaseModel):
     parent: str = Field(..., description="この調査Nodeを生成した仮説NodeのID")
     question: str = Field(..., description="この調査Nodeの問")
     result: str | None = Field(None, description="questionに対する結論")
-    status: Literal["Todo", "Active", "Running", "Done", "Pruned"] = Field(
+    status: Literal["Todo", "Active", "Running", "Done", "Blocked"] = Field(
         "Todo", description="このNodeの状態"
     )
-    references: list[str] = Field(
+    references: list[Reference] = Field(
         default_factory=list, description="この結果を参照するための情報参照先"
     )
+    model_config = ConfigDict(validate_assignment=True)
+
+    def update(self, content: ResearchChanges):
+        if add_items := content.get("add_items", None):
+            self.add_references(add_items)
+
+        if "result" in content:
+            self.result = content["result"]
+
+        if "status" in content:
+            self.status = content["status"]
+
+        if delete_item_ids := content.get("delete_item_ids", None):
+            self.delete_references(delete_item_ids)
+
+    def add_references(self, add_items: list[Reference]):
+        id_list = [item["id"] for item in add_items]
+        if len(id_list) != len(list(set(id_list))):
+            raise ValueError("add_items contains duplicate reference IDs")
+
+        for ref in add_items:
+            if ref["id"] in [r["id"] for r in self.references]:
+                raise ValueError(f"id '{ref['id']}' already exists.")
+
+        self.references = [*self.references, *add_items]
+
+    def delete_references(self, reference_ids: list[str]):
+        self.references = [ref for ref in self.references if ref["id"] not in reference_ids]
