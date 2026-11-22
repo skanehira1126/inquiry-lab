@@ -25,8 +25,9 @@ description: "予測モデルの新規構築・改善、範囲を指定した設
 開発データとtestの範囲・利用履歴を確認し、下の方針で扱う。
 
 [分析先と履歴の共通手順](../analyze/references/history-recording.md)で依頼・run・履歴・treeを準備する。
-全体進行担当は Core と仮説の割当を管理する。自分で仮説を試す場合も、委任を受けた場合も、
-着手時に `state start` で自分の担当を記録する。再開時は `state show STATE` で担当を読み、
+全体進行担当は Core を管理する。[仮説・調査を子に任せるとき](../analyze/references/tree.md#委任の単位)は、共有 tree の絶対パス、仮説 ID、依頼文書、割当 run を渡す。調査を任せる子には調査 ID も伝える。
+実装や検証を頼む子にも、比較条件を記した枝があればその参照先を添える。
+仮説・調査の担当者は、着手時に `state start` で自分の担当仮説を記録する。再開時は `state show STATE` で担当を読み、
 [modeling の引き継ぎ手順](references/tree.md)で採用中のモデルと今回の比較対象を確認する。
 
 ## データの利用方針

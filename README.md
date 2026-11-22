@@ -149,7 +149,8 @@ MLflowやローカルに保存した結果は原本を参照し、判断に必�
 train・valid・pretest・testの役割、利用できる区分の選択、AVと開発側の裏付けに基づくtest評価・再評価を扱います。
 testは最終ホールドアウトで、必要な場合に開発開始前に確保します。4分割は必須ではありません。
 個別の比較・診断の完了条件は専門Skillが定め、全体の進行担当が継続・終了を判断します。
-専門Skillには調査または仮説を[委任](skills/analyze/references/tree.md#委任の単位)します。各作業者は割当runへ結果を返し、Core・共有履歴・`output.md`は全体進行担当が更新します。
+調査や仮説を[委任](skills/analyze/references/tree.md#委任の単位)された子は、共有 tree の担当ノードに結果を記し、割当 run に根拠を残します。
+実装を手伝う子も、関連する枝から比較条件を確認できます。Core・共有履歴・`output.md` は全体進行担当が更新します。
 単独実行の出力先は各Skillの指定に従います。
 
 モデルのパラメータを調整する案件では、modelingが[チューニングSkill](skills/parameter-tuning/SKILL.md)を読みます。

@@ -1,23 +1,26 @@
 # 作業者の現在地と共有 tree
 
-全体進行担当は、目的を Core に置き、調べる仮説を tree に登録する。担当を委任するときは、
-共有 tree の絶対パス、担当仮説 ID、依頼と割当 run を渡す。
+親も子も同じ tree を参照する。全体進行担当が目的を Core に置き、調べる仮説を登録する。
 
 ```bash
 inquiry-lab tree init tree.json --core-id C --goal '店舗の需要予測が外れる条件を調べる'
 inquiry-lab tree add-hypothesis tree.json H1 --core --hypothesis '冬は誤差が大きい' --constraint '同じ店舗群で比較する'
+inquiry-lab tree add-research tree.json R1 --parent H1 --question '冬と春の誤差はどう違うか'
 ```
 
 ## 委任の単位
 
-- **調査を分担する。** 仮説の担当者が、同じ仮説の下で並行して進める調査を分け、各作業者の依頼に調査 ID と割当 run を記す。作業者は自分の調査の `status`・`result`・`references` を更新して run を返す。仮説の担当者が各結果を照合し、仮説の `result` と `status` を更新する。
-- **仮説ごと任せる。** 一つの仮説を一人に渡し、直下の調査から仮説の結論・状態の更新まで任せる。独立した仮説は別々の作業者に並行して任せられる。
+仮説や調査を任せる親は、担当ノードを登録してから、共有 tree の絶対パス、担当仮説 ID、依頼文書、割当 run の場所を子に渡す。調査を任せるときは、その調査 ID も渡す。
+
+- **調査を任せる。** たとえば `H1` の調査 `R1` を任された子は、割当 run に比較の詳細を残し、`R1` に状態・結果・run への参照を記す。仮説の担当者が各調査の結果を照合し、`H1` の結論と状態を更新する。
+- **仮説ごと任せる。** 子はその仮説の直下の調査を進め、結果をまとめて仮説の結論と状態まで更新する。独立した仮説は並行して別の子に任せられる。
+- **実装や検証を頼む。** 親は作業に必要な条件を伝え、関連する枝があれば tree の絶対パスと仮説 ID を添える。たとえば分析先が `/work/demand` なら、集計コードを頼まれた子は `inquiry-lab tree status /work/demand/tree.json H1` で「同じ店舗群で比較する」という条件を確認し、コードとテスト結果を依頼元に返す。
 
 単独で進める場合は、自分で調査と仮説の両方を更新する。
 
 ## 着手と再開
 
-作業者は着手時に自分の保存先を決め、`state start` で担当を記録する。並行する作業者には別々のパスを使う。
+仮説・調査の担当者は着手時に自分の保存先を決め、`state start` で担当を記録する。並行する作業者には別々のパスを使う。
 以下は分析先から実行する例。再開や引き継ぎに使えるよう、コマンドが返す state の絶対パスを依頼や作業記録に残す。
 
 ```bash
@@ -52,7 +55,6 @@ state の中身は共有 tree の参照先と担当仮説 ID の2項目。調査
 
 ```bash
 inquiry-lab tree update tree.json hypothesis H1 --status Active
-inquiry-lab tree add-research tree.json R1 --parent H1 --question '冬と春の誤差はどう違うか'
 inquiry-lab tree update tree.json research R1 --status Blocked --result '春の実績は到着待ち' --add-reference winter runs/001/result.md
 ```
 
@@ -68,4 +70,4 @@ inquiry-lab state update agents/A/state.json --hypothesis H2
 inquiry-lab state finish agents/A/state.json
 ```
 
-`finish` が削除するのは指定した作業者の state ファイルだけ。全体進行担当は各枝の結論と根拠を照合して、Core の知見と全体状態を更新する。
+`finish` は指定した作業者の state ファイルを削除する。全体進行担当は各枝の結論と根拠を照合し、Core の知見と全体状態、共有履歴、統合レポートを更新する。

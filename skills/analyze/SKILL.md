@@ -60,7 +60,8 @@ Pythonで図を作るコードを書くときは、[inquiry-lab-api](../inquiry-
 ### 分析先と記録を準備する
 
 計画を実行に移す前に、[分析先と履歴の共通手順](references/history-recording.md)に従い、
-依頼・run・履歴・treeを準備する。[成果物の共通方針](references/deliverables.md)と
+依頼・run・履歴・treeを準備する。子に作業を任せるときは、[委任の単位](references/tree.md#委任の単位)に沿って、参照する枝と担当範囲を伝える。
+[成果物の共通方針](references/deliverables.md)と
 選んだSkillの出力手順で、レポートの保存先と構成を揃える。
 
 ## 3. 分析ループを進める
