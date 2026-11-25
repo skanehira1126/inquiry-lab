@@ -110,6 +110,8 @@ CLIによる学習・探索の自動実行は未実装。
 - `skills/parameter-tuning/SKILL.md`：設定の探索・比較と、依頼された評価の完了条件。
 - `skills/feature-design/SKILL.md`：経験的な仮説や診断から特徴量の削減・追加・変換を考え、再学習で比較する手順と終了条件。
   仮説を特徴量へ具体化する方法、候補集合の共同評価と表現の採用基準の正本。
+- `skills/analysis-testing/SKILL.md` は分析処理のテスト設計・実行・判定を扱う。表形式の特徴量生成・結合と、モデリングでの学習範囲・推論との一致はそれぞれの参照文書に置く。
+  新しい用途のテストを追加するときは、このSkillの `references/` に文書を置き、`SKILL.md` に選択条件を加える。
 - `skills/error-analysis/SKILL.md`：計画した範囲の誤差を一括診断し、報告して終了する手順。
   `references/diagnostics.md`で変更前後の誤りを比較し、弱点の改善と新たな苦手領域・悪化を確認する。
   各Skillはanalyzeの共通記録を使い、委任時は[委任の単位](skills/analyze/references/tree.md#委任の単位)に応じて担当ノードを更新してrunを返す。Core・共有履歴・統合レポートは全体進行担当が更新する。

@@ -1,0 +1,5 @@
+interface:
+  display_name: "Analysis Testing"
+  short_description: "分析処理を用途に応じたテストで確かめ、失敗例と未確認の範囲を返す"
+policy:
+  allow_implicit_invocation: false

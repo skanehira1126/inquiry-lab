@@ -2,7 +2,7 @@
 
 分析の進行を支援するCodexプラグインと、分析ワークスペースを作るPython CLIです。
 プラグインには、目的と判断基準を整理し、試行結果に応じて次の作業を選ぶ
-`analyze`、モデルの構築・改善を進める `modeling`、性格を把握する `models-understanding`、一括で観察する `eda`、探索を繰り返す `eda-loop`、`parameter-tuning`、`feature-design`、`error-analysis` を同梱しています。
+`analyze`、モデルの構築・改善を進める `modeling`、性格を把握する `models-understanding`、一括で観察する `eda`、探索を繰り返す `eda-loop`、`parameter-tuning`、`feature-design`、`error-analysis`、分析処理をテストする `analysis-testing` を同梱しています。
 コードの実装には `inquiry-lab-api` が公開関数の選択・入力条件・呼び出し方を案内します。
 EDAは表形式・イベントと反復観測・予測準備の参照を組み合わせて使います。
 テンプレート集はモデルのパラメータチューニング、特徴量選択・エンジニアリング、誤差分析を提供しています。
@@ -81,6 +81,11 @@ inquiry-lab/
 │   │   ├── SKILL.md                # 特徴量の削減・追加・変換
 │   │   ├── agents/openai.yaml
 │   │   ├── references/            # 比較設計・重要度の読み方
+│   │   └── assets/report.md
+│   ├── analysis-testing/
+│   │   ├── SKILL.md                # 分析処理のテスト設計・実行・判定
+│   │   ├── agents/openai.yaml
+│   │   ├── references/             # 表形式の特徴量前処理、モデリングの学習・推論
 │   │   └── assets/report.md
 │   └── error-analysis/
 │       ├── SKILL.md                # 計画した誤差診断を一括実施
@@ -161,6 +166,9 @@ testは最終ホールドアウトで、必要な場合に開発開始前に確�
 仮説を特徴量へ具体化し、候補集合の再学習で性能・入力依存・処理負担を比較します。
 表現の設計・共同評価・採用基準はSkill、診断手法の選択は[models-understanding](skills/models-understanding/SKILL.md)を参照します。
 [レポート雛形](skills/feature-design/assets/report.md)では、変更の意図と検証結果、採否の根拠を対応づけます。
+
+[分析処理のテスト](skills/analysis-testing/SKILL.md)は、元テーブルからの特徴量生成と最終結合、学習・推論への情報の混入を、用途に合うケースで確かめます。
+たとえば「`$inquiry-lab:analysis-testing` で、後から届いた注文を加えても過去の予測行の特徴量が変わらないかテストして」と依頼できます。
 
 予測が外れる対象・条件を調べる案件では、[誤差分析Skill](skills/error-analysis/SKILL.md)を使います。
 分類・回帰・ランキングの予測と正解について、全体・比較するセグメント・計測する指標や図を先に決め、一括で診断・報告して完了します。

@@ -49,6 +49,7 @@ description: "モデルベースの特徴量選択・設計。経験的な仮説
    入力依存は[models-understanding](../models-understanding/SKILL.md)の方法から選び、
    importance・SHAPを使う場合は[重要度の読み方](references/importance.md)を参照する。相関や同じ由来の特徴量も考慮する。
 3. **候補集合を再学習して比較する。** 今回試す候補全体を含む構成を基本として、基準モデルと比較する。
+   新設・変更した特徴量の生成処理は、[分析処理のテスト](../analysis-testing/SKILL.md)で予測時点の再現性や結合を確かめ、使える候補を比較に進める。
    候補の特徴量一覧・生成コードを保存し、性能差と列数の増減を測る。
    特徴量の分布や2値分類のROC・較正をPythonで描くときは、[inquiry-lab-api](../inquiry-lab-api/SKILL.md)で対応する関数を確認する。
    個別の比較は、候補全体から一部を削る判断や小幅なパラメータ調整に使う。
