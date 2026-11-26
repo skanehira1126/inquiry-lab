@@ -28,7 +28,7 @@ APIに合わせて評価データや分析方法を変更しない。要件を�
 ## 呼び出す前に確認する
 
 - 実行環境にPythonパッケージと `visualize` extraがあることを確認する。
-  プラグインの導入だけではPython依存は入らない。導入方法は[README](../../README.md#pythonからグラフを保存する)を参照する。
+  プラグインの導入だけではPython依存は入らない。導入方法は[README](https://github.com/skanehira1126/inquiry-lab/blob/main/README.md#pythonからグラフを保存する)を参照する。
 - 入力はPolars DataFrame。列名だけでなく値の意味と参照先の条件を照合する。
   指定列の欠損・非有限値は暗黙に除外されない。前処理が必要なら分析側で対象と理由を決める。
 - 保存先を `output` で渡す。対応形式はPNG（900×900 px）・SVG・PDFで、親ディレクトリは自動作成し、

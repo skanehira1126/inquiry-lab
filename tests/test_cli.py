@@ -331,7 +331,7 @@ def test_run_template_cli_argument_errors(args, capsys):
 def test_packaged_eda_template_matches_skill_asset():
     root = Path(__file__).resolve().parents[1]
     assert (root / "src/inquiry_lab/templates/eda-result.md").read_bytes() == (
-        root / "skills/eda/assets/result.md"
+        root / "plugins/inquiry-lab/skills/eda/assets/result.md"
     ).read_bytes()
 
 

@@ -14,7 +14,7 @@ Python、SQL、Notebookなど、案件の既存環境に合う実行手段を選
 Pythonで図を作るコードを書くときは、[inquiry-lab-api](../inquiry-lab-api/SKILL.md)で利用できる関数と入力条件を確認する。
 設定や結果のJSONを閲覧する際は、`inquiry-lab json inspect <ファイル>` を使う。
 ネストは展開されないため、必要な階層を `--key model.params` または `--key model --key params` で指定する。
-キー名にドットを含むJSONは未対応。表示の省略や読込範囲は[CLIの説明](../../README.md#jsonの基本確認)を確認する。
+キー名にドットを含むJSONは未対応。表示の省略や読込範囲は[CLIの説明](https://github.com/skanehira1126/inquiry-lab/blob/main/README.md#jsonの基本確認)を確認する。
 
 ## 1. 分析目的を受け取る
 

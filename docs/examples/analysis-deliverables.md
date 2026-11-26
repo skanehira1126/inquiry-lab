@@ -2,7 +2,7 @@
 
 以下は架空の独立した3案件のrun本文の抜粋。手順と入力版も架空の例であり、
 結果から例示用の[集計CSV](observations.csv)の行を辿れる。run名は案件内のラベルである。
-評価への進行判断は[共通のデータ利用方針](../../skills/modeling/references/data-usage.md)に従い、ここでは履歴の記入箇所を抜粋する。
+評価への進行判断は[共通のデータ利用方針](../../plugins/inquiry-lab/skills/modeling/references/data-usage.md)に従い、ここでは履歴の記入箇所を抜粋する。
 
 - A：分類モデルの木の深さを比較し、選んだ候補をtestで評価した案件。
 - B：別の分類案件で候補を見送り、testを未使用とした案件。

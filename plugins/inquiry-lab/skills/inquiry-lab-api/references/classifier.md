@@ -55,4 +55,4 @@ ROCに使えるスコアでも、確率でなければ較正には使わない�
 対角線は予測確率と陽性率が一致する基準。ビン境界上の値は左側のビンに含め、0は最初、1は最後に含める。
 空のビンは点を描かず線を切り、陽性率0とは扱わない。ビン数・境界の変更引数はない。
 
-実装：[classifier.py](../../../src/inquiry_lab/visualize/ml/classifier.py)。
+実装：[classifier.py](https://github.com/skanehira1126/inquiry-lab/blob/main/src/inquiry_lab/visualize/ml/classifier.py)。

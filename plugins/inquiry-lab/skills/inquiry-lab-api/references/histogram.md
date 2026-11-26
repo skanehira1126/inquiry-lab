@@ -29,4 +29,4 @@ plot_histogram(observations, column="value", hue="group", output="runs/001/artif
   ひげは各四分位数から1.5 IQR以内にある最も遠い観測値まで伸ばし、その外側の値は点で示す。
   点で示した値もヒストグラムの集計に含める。外れ値の表示だけで異常や除外対象とは判定しない。
 
-実装：[common.py](../../../src/inquiry_lab/visualize/common.py)。
+実装：[common.py](https://github.com/skanehira1126/inquiry-lab/blob/main/src/inquiry_lab/visualize/common.py)。

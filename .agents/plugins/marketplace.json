@@ -8,7 +8,7 @@
       "name": "inquiry-lab",
       "source": {
         "source": "local",
-        "path": "./"
+        "path": "./plugins/inquiry-lab"
       },
       "policy": {
         "installation": "AVAILABLE",

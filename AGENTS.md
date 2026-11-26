@@ -21,20 +21,20 @@ Notebook Workbenchにも同等CLIを残せるが、inquiry-labは実行時に依
 `visualize.common.plot_scatter` は2つの数値列の関係を散布図で保存し、任意の `hue` 列で色分けする。
 `visualize.common.plot_count` はカテゴリ別件数・群内割合を棒グラフで保存し、未集計なら行数、集計済みなら指定件数列を合計する。
 `plot_calibration_curve` は確率の較正曲線と、同じビンのサンプル数を重ねて保存する。
-`skills/analyze/` が分析の進行・記録・最終レポートを扱う。
-`skills/modeling/` は予測モデルの新規構築・改善、範囲を指定した設定比較・特徴量設計の入口。
+`plugins/inquiry-lab/skills/analyze/` が分析の進行・記録・最終レポートを扱う。
+`plugins/inquiry-lab/skills/modeling/` は予測モデルの新規構築・改善、範囲を指定した設定比較・特徴量設計の入口。
 学習・評価と性格把握を出発点に、広い仮説探索と深掘りを繰り返し、事実から全体の見立てを更新する。
-`skills/models-understanding/` は構成・性能・入力依存と過去の変更への反応から性格を帰納的に把握し、runで返す。
+`plugins/inquiry-lab/skills/models-understanding/` は構成・性能・入力依存と過去の変更への反応から性格を帰納的に把握し、runで返す。
 必要な範囲の誤差分析を使い、次の行動の決定は呼出元が担当する。
-`skills/eda/` は1shotの探索を担い、表形式・イベントと反復観測・予測準備の参照を組み合わせ、一括で観察・報告する。
-`skills/eda-loop/` は各回のEDAを独立したサブエージェントへ委任し、親が次の依頼・方向転換・停止を判断する。
+`plugins/inquiry-lab/skills/eda/` は1shotの探索を担い、表形式・イベントと反復観測・予測準備の参照を組み合わせ、一括で観察・報告する。
+`plugins/inquiry-lab/skills/eda-loop/` は各回のEDAを独立したサブエージェントへ委任し、親が次の依頼・方向転換・停止を判断する。
 新しい子コンテキストを作れる環境を前提とし、同一エージェントでの反復へは切り替えない。`eda` 単独の1shot利用は可能。
-`skills/parameter-tuning/`、`skills/feature-design/`、`skills/error-analysis/` は、
+`plugins/inquiry-lab/skills/parameter-tuning/`、`plugins/inquiry-lab/skills/feature-design/`、`plugins/inquiry-lab/skills/error-analysis/` は、
 設定の比較・選定、特徴量の選択・設計、モデルの誤差診断をそれぞれ扱う。
 各Skillの基本手順と終了条件は `SKILL.md`、詳細は `references/`、レポート雛形は `assets/` に置く。
 レポート雛形は見出しと最低限の項目に絞り、執筆指示はSkillの出力節または参照文書を正本とする。
 分析の入口はanalyzeとmodelingとし、EDAを含む専門Skillの自動選択は無効にする。
-`skills/inquiry-lab-api/` は実装時の公開関数の選択・入力条件・呼び出し方を扱い、自動選択を有効にする。
+`plugins/inquiry-lab/skills/inquiry-lab-api/` は実装時の公開関数の選択・入力条件・呼び出し方を扱い、自動選択を有効にする。
 分析方法・終了判断は分析側に残し、APIの詳細と使用例はこのSkillの `references/` に集約する。
 プラグインmanifestとリポジトリ用marketplaceで、このSkillを提供する。
 段階別Skill、分析レポート自動生成、MCPサーバー、
@@ -43,18 +43,18 @@ CLIによる学習・探索の自動実行は未実装。
 
 ## 実装の入口と開発方針
 
-- `.codex-plugin/plugin.json`：リポジトリ直下をプラグインとし、`./skills/` を参照する。
+- `plugins/inquiry-lab/.codex-plugin/plugin.json`：プラグイン内の `./skills/` を参照する。
 - [create-analysis-template](.agents/skills/create-analysis-template/SKILL.md) は、analyze・EDA などの分析手順と雛形を保守するリポジトリ開発用 Skill。
 - [create-modeling-template](.agents/skills/create-modeling-template/SKILL.md) は、modeling とモデル系専門 Skill の手順・参照文書・レポート雛形を保守するリポジトリ開発用 Skill。
-- `.agents/plugins/marketplace.json`：`source.path: "./"` で同プラグインを公開する。
-  プラグインの導入とPython CLIの導入を区別し、不要なMCPやhookを追加しない。
+- `.agents/plugins/marketplace.json`：`source.path: "./plugins/inquiry-lab"` で同プラグインを公開する。
+  CLI は利用者が明示的に導入する。Codex の SessionStart hook はプラグインと PATH 上の CLI の版を比較する。
 - `src/inquiry_lab/cli.py`：引数解析とCLIハンドラー。
   `argparse` の `set_defaults(func=...)` で登録し、`func(**args)` で呼び出す構成を保つ。
 - `src/inquiry_lab/tree_map/cli.py`：既存 tree JSON の単一ノード追加・更新。filelock で CLI 間の読み込みから保存までを直列化し、操作に成功した場合に保存する。テストは `tests/test_tree_cli.py`。
   読み取り専用の search・details・ancestors は仮説と調査の検索、1件の詳細、親から Core までの背景を表示する。検索範囲・出力のテストは `tests/test_tree_search.py`。
 - `src/inquiry_lab/history.py`：履歴JSONの検査・保存と、短い `作業履歴.md`・各ループの詳細 `history/NNNNNN.md` の生成。
 - `src/inquiry_lab/data.py`：単一ファイルの基本確認と値の全件集計。PyArrowでParquetを読み、CSV/TSVの文字列を保持する。
-  `skills/eda/references/data-inspection.md` に結果の読み方と範囲を集約する。
+  `plugins/inquiry-lab/skills/eda/references/data-inspection.md` に結果の読み方と範囲を集約する。
   表示上限と走査範囲を区別し、未集計の欠損をゼロと扱わない。テストは `tests/test_data.py`。
 - `src/inquiry_lab/json_inspection.py`：JSONの読み取り専用の階層参照と表示。
   キー名にドットを含むJSONと重複キーを拒否する。全体を読み込み、表示項目数と長い値を制限して省略を明示する。
@@ -62,7 +62,7 @@ CLIによる学習・探索の自動実行は未実装。
 - `src/inquiry_lab/json_parsing.py`：JSON inspection と作業者 state の入力で重複・ドット付きキーを拒否。
 - `src/inquiry_lab/state.py`：作業者ごとの明示したファイルに共有treeの参照先と担当仮説IDを保存する。
   showは最新のtreeからCoreの目的、担当仮説と直下の調査を返す。updateは同じtree内の既存仮説に切り替え、finishは指定したstateを削除する。
-  `skills/analyze/references/tree.md`が着手・再開・終了の正本。テストは`tests/test_state.py`。
+  `plugins/inquiry-lab/skills/analyze/references/tree.md`が着手・再開・終了の正本。テストは`tests/test_state.py`。
 - `src/inquiry_lab/workspace.py`：テンプレート読込と展開。
   テンプレートは `importlib.resources` から読み、インストール先や実行時のcwdに依存させない。
 - `src/inquiry_lab/visualize/common.py`：MLに限らない汎用の描画・保存。
@@ -82,39 +82,39 @@ CLIによる学習・探索の自動実行は未実装。
   テストは `tests/test_classifier.py`。描画依存は `visualize` extraに分離する。
 - `src/inquiry_lab/templates/`：依頼、試行結果、統合レポートのMarkdownテンプレート。
   汎用雛形は英語、EDA用run雛形は日本語で、利用者が記入する言語は自由。
-  EDAの正本は `skills/eda/assets/result.md` とし、変更時は同じ内容を `templates/eda-result.md` へコピーして一致を検証する。
+  EDAの正本は `plugins/inquiry-lab/skills/eda/assets/result.md` とし、変更時は同じ内容を `templates/eda-result.md` へコピーして一致を検証する。
 - `tests/test_cli.py`：CLIの公開挙動、生成物、既存データの保護、展開失敗時の後始末を検証する。
-- `skills/analyze/SKILL.md`：目的・判断基準の整理と、結果に応じた分析の進行判断。
+- `plugins/inquiry-lab/skills/analyze/SKILL.md`：目的・判断基準の整理と、結果に応じた分析の進行判断。
   EDAとモデルの理解・誤差診断を扱い、設定比較・特徴量設計はmodelingへ渡す。
   再開に必要な情報と作業履歴の共通構成を扱う。CLIでJSONを記録してMarkdownを生成できる。
-  分析先・runの準備と履歴の記録は `skills/analyze/references/history-recording.md` に集約し、各Skillから直接参照する。
+  分析先・runの準備と履歴の記録は `plugins/inquiry-lab/skills/analyze/references/history-recording.md` に集約し、各Skillから直接参照する。
   案件別の定量指標や未実装の段階別Skill・CLIを前提にしない。
-- `skills/modeling/SKILL.md`：学習・評価と性格把握から、広い仮説探索・深掘り・見立ての更新を繰り返す。
+- `plugins/inquiry-lab/skills/modeling/SKILL.md`：学習・評価と性格把握から、広い仮説探索・深掘り・見立ての更新を繰り返す。
   初期構成・設定探索、仮説生成、行動選択、時間内での終了判断の正本。
   `references/data-usage.md`をモデル関連Skillのデータ利用方針の正本とする。
   train・valid・pretest・testの役割、柔軟な分割、AVと開発側の裏付けによるtest評価・再評価を扱う。
   共通の履歴・treeを使い、`references/tree.md`でモデルの参照と委任・再開を定める。
   `assets/report.md`で改善結果と現在地を報告する。
-- `skills/models-understanding/SKILL.md`：モデルの構成・性能・入力依存・変更への反応をつなげる。
+- `plugins/inquiry-lab/skills/models-understanding/SKILL.md`：モデルの構成・性能・入力依存・変更への反応をつなげる。
   定石は仮説の出発点とし、実測から適用範囲と不確実性を伴う見立てを更新する。誤差分析は必要に応じて使う。
   更新後は旧モデルと同じ対象で予測差と誤りの変化を確認し、全体指標に表れない違いも評価する。
   `assets/report.md`の3章でrun結果を返し、直接実行でも`output.md`は更新しない。
-- `skills/eda/SKILL.md`：データを説明するための暫定的な質問を立て、1shotで確認・評価・報告するEDAの入口。全体像の把握では広い視点を検討し、データの形・観測の構造・利用目的に応じて
+- `plugins/inquiry-lab/skills/eda/SKILL.md`：データを説明するための暫定的な質問を立て、1shotで確認・評価・報告するEDAの入口。全体像の把握では広い視点を検討し、データの形・観測の構造・利用目的に応じて
   `references/` の見方を組み合わせる。利用予定のデータセット固有の列名や規則を共通の前提にしない。
   EDAの見方を追加する場合はここを改訂する。依頼・実行記録はanalyzeの共通手順を使い、結果からの追加探索は行わない。
   `references/request.md` が呼出元との依頼・返却の共通契約。直接実行でも出力はrunで、`output.md` の執筆・更新はしない。
   `assets/result.md` で観察の位置づけ・対象と方法・結果と読み取り・言えることと限界・再現情報の本文5章を作る。質問別の回答・次の候補は付録に残す。
-- `skills/eda-loop/SKILL.md`：1shotのEDAを毎回新しい子へ委任する外側の探索ループ。必要な調査済み範囲と根拠を渡し、
+- `plugins/inquiry-lab/skills/eda-loop/SKILL.md`：1shotのEDAを毎回新しい子へ委任する外側の探索ループ。必要な調査済み範囲と根拠を渡し、
   質問の見直し、次の依頼・継続・停止と知見の統合を担当する。観察手法と依頼契約は `eda` を使い、`assets/report.md` で `output.md` を作る。
   想定質問と回答はrunに残す。統合レポートは全体の総括と、各観点の知見・探索経緯・未確認の範囲を示し、詳細を各runへつなぐ。
-- `skills/parameter-tuning/SKILL.md`：設定の探索・比較と、依頼された評価の完了条件。
-- `skills/feature-design/SKILL.md`：経験的な仮説や診断から特徴量の削減・追加・変換を考え、再学習で比較する手順と終了条件。
+- `plugins/inquiry-lab/skills/parameter-tuning/SKILL.md`：設定の探索・比較と、依頼された評価の完了条件。
+- `plugins/inquiry-lab/skills/feature-design/SKILL.md`：経験的な仮説や診断から特徴量の削減・追加・変換を考え、再学習で比較する手順と終了条件。
   仮説を特徴量へ具体化する方法、候補集合の共同評価と表現の採用基準の正本。
-- `skills/analysis-testing/SKILL.md` は分析処理のテスト設計・実行・判定を扱う。表形式の特徴量生成・結合と、モデリングでの学習範囲・推論との一致はそれぞれの参照文書に置く。
+- `plugins/inquiry-lab/skills/analysis-testing/SKILL.md` は分析処理のテスト設計・実行・判定を扱う。表形式の特徴量生成・結合と、モデリングでの学習範囲・推論との一致はそれぞれの参照文書に置く。
   新しい用途のテストを追加するときは、このSkillの `references/` に文書を置き、`SKILL.md` に選択条件を加える。
-- `skills/error-analysis/SKILL.md`：計画した範囲の誤差を一括診断し、報告して終了する手順。
+- `plugins/inquiry-lab/skills/error-analysis/SKILL.md`：計画した範囲の誤差を一括診断し、報告して終了する手順。
   `references/diagnostics.md`で変更前後の誤りを比較し、弱点の改善と新たな苦手領域・悪化を確認する。
-  各Skillはanalyzeの共通記録を使い、委任時は[委任の単位](skills/analyze/references/tree.md#委任の単位)に応じて担当ノードを更新してrunを返す。Core・共有履歴・統合レポートは全体進行担当が更新する。
+  各Skillはanalyzeの共通記録を使い、委任時は[委任の単位](plugins/inquiry-lab/skills/analyze/references/tree.md#委任の単位)に応じて担当ノードを更新してrunを返す。Core・共有履歴・統合レポートは全体進行担当が更新する。
   テーマ追加では独立したSkill・雛形と、担当する入口の参照を更新する。
 - `pyproject.toml`：Python 3.12以降、Flitによる配布、pytestとRuffによる検証を定義する。
   基本の実行時依存はParquet対応のPyArrow。可視化用extraはmatplotlib・NumPy・Polars・scikit-learn。

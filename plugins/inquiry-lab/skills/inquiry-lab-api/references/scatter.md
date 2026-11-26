@@ -28,4 +28,4 @@ plot_scatter(
 - 凡例は描画領域内で、Matplotlibの `loc="best"` により重なりが少ない位置を自動選択する。
   多群の場合は複数列に分ける。重なりを完全になくす保証はない。
 
-実装：[common.py](../../../src/inquiry_lab/visualize/common.py)。
+実装：[common.py](https://github.com/skanehira1126/inquiry-lab/blob/main/src/inquiry_lab/visualize/common.py)。

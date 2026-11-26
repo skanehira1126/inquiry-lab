@@ -37,4 +37,4 @@ plot_count(
 - PNG（900×900 px）・SVG・PDFに保存し、親ディレクトリを作成、同名ファイルを上書きして`Path`を返す。
   入力や呼出元の描画設定は変更しない。
 
-実装：[common.py](../../../src/inquiry_lab/visualize/common.py)。
+実装：[common.py](https://github.com/skanehira1126/inquiry-lab/blob/main/src/inquiry_lab/visualize/common.py)。

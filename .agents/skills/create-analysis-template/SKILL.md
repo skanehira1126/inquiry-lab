@@ -5,14 +5,14 @@ description: "inquiry-lab の analyze・EDA などの分析用 Skill とレポ�
 
 # 分析用Skillを作る
 
-分析テーマごとに `skills/<テーマ名>/` へ独立したSkillを置く。
+分析テーマごとに `plugins/inquiry-lab/skills/<テーマ名>/` へ独立したSkillを置く。
 分析の進行は `analyze`、固有の観察方法と依頼の完了条件は各専門Skillが持つ。
 モデリング手順やモデル系専門Skillの雛形を改訂する場合は [create-modeling-template](../create-modeling-template/SKILL.md) を使う。
-依頼・run・履歴・レポートの共通手順は `analyze`、担当の引き継ぎは[共有 tree の手順](../../../skills/analyze/references/tree.md)を参照する。
+依頼・run・履歴・レポートの共通手順は `analyze`、担当の引き継ぎは[共有 tree の手順](../../../plugins/inquiry-lab/skills/analyze/references/tree.md)を参照する。
 
 ## 範囲を決める
 
-[analyzeの選択表](../../../skills/analyze/SKILL.md)と近いSkillを読み、
+[analyzeの選択表](../../../plugins/inquiry-lab/skills/analyze/SKILL.md)と近いSkillを読み、
 何を判断する分析か、必要な入力、結果の使い方を比較する。同じ目的なら既存Skillを改訂する。
 一括診断か反復探索かを明確にし、成功時だけでなく、根拠不足や予算到達時に何を返すか決める。
 EDAの見方の追加は `eda` の参照文書を改訂する。
@@ -34,12 +34,12 @@ EDAの見方の追加は `eda` の参照文書を改訂する。
 注意事項は判断を変えるものに絞り、同じ制約を各節で繰り返さない。
 
 一括で行う観察では、今回確認する範囲と、次の分析へ返す問いを分ける。
-予測用途の EDA には[モデル開発のデータ利用方針](../../../skills/modeling/references/data-usage.md)を適用する。
+予測用途の EDA には[モデル開発のデータ利用方針](../../../plugins/inquiry-lab/skills/modeling/references/data-usage.md)を適用する。
 
 テーマの `assets/` にレポート雛形を置き、Skillの「出力」からリンクする。
-[成果物の共通方針](../../../skills/analyze/references/deliverables.md)を使い、
+[成果物の共通方針](../../../plugins/inquiry-lab/skills/analyze/references/deliverables.md)を使い、
 結論から主要な判断・証拠・前提を辿れる構成にする。
-委任時は各作業者が自分の state を管理し、[委任の単位](../../../skills/analyze/references/tree.md#委任の単位)に従って tree を更新し、割当runを返す。Core・共有履歴・統合レポートは全体進行担当が更新する。
+委任時は各作業者が自分の state を管理し、[委任の単位](../../../plugins/inquiry-lab/skills/analyze/references/tree.md#委任の単位)に従って tree を更新し、割当runを返す。Core・共有履歴・統合レポートは全体進行担当が更新する。
 単独実行時にrunだけを返すか、統合レポートまで作るかはSkillの目的に合わせて明記する。
 
 - 大章の役割と順序をテーマ内で揃え、小見出しは案件に合わせる。
